@@ -8,7 +8,7 @@ fun main(args: Array<String>) {
     val compilerInstance = StellaCompiler(sourceCode)
     compilerInstance.compile()
 
-    val errorCode = 0
+    val errorCode = if (compilerInstance.diagEngine.hasError) -2 else 0
 
     exitProcess(errorCode)
 }
