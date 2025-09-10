@@ -89,11 +89,11 @@ FORALL : 'forall' ;
 COMMENT_antlr_builtin
 : (
 '//' ~[\r\n]* (('\r'? '\n')|EOF)
-) -> skip;
+) -> channel(HIDDEN);
 MULTICOMMENT_antlr_builtin
 : (
 '/*' (.)*? '*/'
-) -> skip;
+) -> channel(HIDDEN);
 
 StellaIdent : ('_'|LETTER) ([!\-:?_]|(DIGIT|LETTER))*;
 ExtensionName : '#' ([\-_]|(DIGIT|LETTER))+;
@@ -105,7 +105,7 @@ MemoryAddress: '<0x' (DIGIT|[A-F]|[a-f])+ '>';
 INTEGER : DIGIT+;
 
 // Whitespace
-WS : (' ' | '\r' | '\t' | '\n' | '\f')+ ->  skip;
+WS : (' ' | '\r' | '\t' | '\n' | '\f')+ ->  channel(HIDDEN);
 // Escapable sequences
 fragment
 Escapable : ('"' | '\\' | 'n' | 't' | 'r' | 'f');
