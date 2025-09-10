@@ -3,6 +3,7 @@ package edu.stella.core
 import com.strumenta.antlrkotlin.parsers.generated.stellaLexer
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.checker.StellaTypeChecker
+import edu.stella.checker.SymbolCollector
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import org.antlr.v4.kotlinruntime.StringCharStream
 
@@ -14,8 +15,9 @@ class StellaCompiler(private val sourceCode: String) {
 
     fun compile() {
         val ast = parser.program()
+        val symbols = ast.accept(SymbolCollector())
 
-        StellaTypeChecker(ast, diagEngine).check()
+        StellaTypeChecker(ast, symbols, diagEngine).check()
     }
 
     companion object {
