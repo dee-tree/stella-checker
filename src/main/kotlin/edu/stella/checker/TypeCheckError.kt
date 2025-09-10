@@ -1,6 +1,8 @@
 package edu.stella.checker
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
+import edu.stella.core.Diag
+import edu.stella.core.quote
 import org.antlr.v4.kotlinruntime.ParserRuleContext
 import org.antlr.v4.kotlinruntime.TokenStream
 

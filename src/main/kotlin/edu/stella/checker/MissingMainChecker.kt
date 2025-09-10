@@ -2,6 +2,7 @@ package edu.stella.checker
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import com.strumenta.antlrkotlin.parsers.generated.stellaParserBaseVisitor
+import edu.stella.core.DiagnosticsEngine
 import org.antlr.v4.kotlinruntime.tree.RuleNode
 
 class MissingMainChecker(private val diag: DiagnosticsEngine) : stellaParserBaseVisitor<Unit>() {

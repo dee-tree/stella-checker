@@ -2,6 +2,7 @@ package edu.stella.checker
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import com.strumenta.antlrkotlin.parsers.generated.stellaParserBaseVisitor
+import edu.stella.core.DiagnosticsEngine
 
 class StellaTypeChecker(
     private val program: stellaParser.ProgramContext,

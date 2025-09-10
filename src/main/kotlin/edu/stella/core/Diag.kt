@@ -1,4 +1,4 @@
-package edu.stella.checker
+package edu.stella.core
 
 import org.antlr.v4.kotlinruntime.TokenStream
 

@@ -1,5 +1,6 @@
-package edu.stella.checker
+package edu.stella
 
+import edu.stella.core.StellaCompiler
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {

@@ -1,7 +1,8 @@
-package edu.stella.checker
+package edu.stella.core
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaLexer
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
+import edu.stella.checker.StellaTypeChecker
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import org.antlr.v4.kotlinruntime.StringCharStream
 
