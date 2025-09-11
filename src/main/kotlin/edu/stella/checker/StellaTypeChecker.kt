@@ -20,6 +20,7 @@ class StellaTypeChecker(
         ctx.accept(MissingMainChecker(diag))
         ctx.accept(UndefinedVariableChecker(symbols, diag))
         ctx.accept(NotFunctionApplicationChecker(symbols, diag))
+        ctx.accept(NotATupleChecker(symbols, diag))
     }
 
     override fun defaultResult() = Unit

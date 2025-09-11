@@ -38,3 +38,9 @@ class DiagNotAFunction private constructor(func: stellaParser.ExprContext, app: 
     constructor(application: stellaParser.ApplicationContext) : this(application.func!!, application)
     constructor(fix: stellaParser.FixContext) : this(fix.expr(), fix)
 }
+
+class DiagNotATuple(tuple: stellaParser.ExprContext) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNDEFINED_VARIABLE,
+    tuple.getParent() ?: tuple,
+    "${tuple.text.quote()} is not a tuple"
+)

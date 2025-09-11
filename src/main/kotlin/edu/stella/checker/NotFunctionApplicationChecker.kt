@@ -11,26 +11,18 @@ class NotFunctionApplicationChecker(
     override fun defaultResult() = Unit
 
     private fun isFunction(fn: stellaParser.ExprContext): Boolean = when (fn) {
-        is stellaParser.RecordContext -> false
-        is stellaParser.TupleContext -> false
-        is stellaParser.ConstTrueContext -> false
-        is stellaParser.ConstFalseContext -> false
-        is stellaParser.ConstIntContext -> false
-        is stellaParser.ConstUnitContext -> false
-        is stellaParser.ListContext -> false
-        is stellaParser.ConsListContext -> false
-        is stellaParser.SuccContext -> false
-        is stellaParser.PredContext -> false
-        is stellaParser.IsZeroContext -> false
+        is stellaParser.AbstractionContext -> true
+        is stellaParser.TypeApplicationContext -> isFunction(fn.expr())
         is stellaParser.VarContext if !symbols.contains(fn.name!!.text!!, fn) -> false
         is stellaParser.VarContext -> when (val decl = symbols.get(fn.name!!.text!!, fn)) {
             is stellaParser.ParamDeclContext -> decl.paramType!! is stellaParser.TypeFunContext
             is stellaParser.DeclFunContext -> true
+            is stellaParser.DeclFunGenericContext -> true
             is stellaParser.BindingContext -> false
             is stellaParser.LetContext -> isFunction(decl.body!!)
             else -> false
         }
-        else -> true
+        else -> false
     }
 
     override fun visitApplication(ctx: stellaParser.ApplicationContext) {
