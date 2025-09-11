@@ -40,11 +40,9 @@ class SymbolTable(val program: stellaParser.ProgramContext) {
         ?: throw StellaCompileException("Symbol ${symbol.quote()} does not present in ctx")
 
     fun add(decl: stellaParser.DeclFunContext) = scope.add(decl)
-
+    fun add(decl: stellaParser.DeclFunGenericContext) = scope.add(decl)
     fun add(decl: stellaParser.ParamDeclContext) = scope.add(decl)
-
     fun add(decl: stellaParser.BindingContext) = scope.add(decl)
-
     fun add(decl: stellaParser.LetContext) = scope.add(decl)
 }
 
@@ -64,7 +62,7 @@ private class SymbolScope private constructor(
         ctx = scope
     ).also { children += it }
 
-    fun add(symbol: String, decl: ParserRuleContext) {
+    private fun add(symbol: String, decl: ParserRuleContext) {
         if (symbol in symbols)
             throw StellaCompileException("Symbol ${symbol.quote()} already presents in symbol table")
 
@@ -72,6 +70,7 @@ private class SymbolScope private constructor(
     }
 
     fun add(decl: stellaParser.DeclFunContext) = add(decl.name!!.text!!, decl)
+    fun add(decl: stellaParser.DeclFunGenericContext) = add(decl.name!!.text!!, decl)
     fun add(decl: stellaParser.ParamDeclContext) = add(decl.name!!.text!!, decl)
     fun add(decl: stellaParser.BindingContext) = add(decl.name!!.text!!, decl)
     fun add(decl: stellaParser.LetContext) = decl.patternBindings.forEach { binding ->

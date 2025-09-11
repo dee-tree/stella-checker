@@ -29,3 +29,12 @@ class DiagUndefinedVariable(variable: stellaParser.VarContext, ctx: RuleContext)
     ctx,
     "variable ${variable.name!!.text!!.quote()} is undefined"
 )
+
+class DiagNotAFunction private constructor(func: stellaParser.ExprContext, app: stellaParser.ExprContext) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_NOT_A_FUNCTION,
+    app,
+    "Callee ${func.text.quote()} is not a function"
+) {
+    constructor(application: stellaParser.ApplicationContext) : this(application.func!!, application)
+    constructor(fix: stellaParser.FixContext) : this(fix.expr(), fix)
+}
