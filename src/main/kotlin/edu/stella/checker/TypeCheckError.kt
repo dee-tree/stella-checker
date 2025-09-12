@@ -56,3 +56,9 @@ class DiagNotAList(list: stellaParser.ExprContext) : TypeCheckError(
     list.getParent() ?: list,
     "${list.text.quote()} is not a list"
 )
+
+class DiagUnexpectedLambda(lambda: stellaParser.ExprContext) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_LAMBDA,
+    lambda.getParent() ?: lambda,
+    "Unexpected lambda ${lambda.text.quote()} in non-functional context"
+)
