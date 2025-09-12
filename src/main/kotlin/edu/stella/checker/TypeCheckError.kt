@@ -50,3 +50,9 @@ class DiagNotARecord(record: stellaParser.ExprContext) : TypeCheckError(
     record.getParent() ?: record,
     "${record.text.quote()} is not a record"
 )
+
+class DiagNotAList(list: stellaParser.ExprContext) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_NOT_A_LIST,
+    list.getParent() ?: list,
+    "${list.text.quote()} is not a list"
+)

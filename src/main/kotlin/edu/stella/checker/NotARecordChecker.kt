@@ -12,6 +12,7 @@ class NotARecordChecker(
 
     private fun isRecord(fn: stellaParser.ExprContext): Boolean = when (fn) {
         is stellaParser.RecordContext -> true
+        is stellaParser.ParenthesisedExprContext -> isRecord(fn.expr())
         is stellaParser.VarContext if !symbols.contains(fn.name!!.text!!, fn) -> false
         is stellaParser.VarContext -> when (val decl = symbols.get(fn.name!!.text!!, fn)) {
             is stellaParser.ParamDeclContext -> decl.paramType!! is stellaParser.TypeRecordContext

@@ -12,6 +12,7 @@ class NotATupleChecker(
 
     private fun isTuple(fn: stellaParser.ExprContext): Boolean = when (fn) {
         is stellaParser.TupleContext -> true
+        is stellaParser.ParenthesisedExprContext -> isTuple(fn.expr())
         is stellaParser.VarContext if !symbols.contains(fn.name!!.text!!, fn) -> false
         is stellaParser.VarContext -> when (val decl = symbols.get(fn.name!!.text!!, fn)) {
             is stellaParser.ParamDeclContext -> decl.paramType!! is stellaParser.TypeTupleContext

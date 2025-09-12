@@ -12,6 +12,7 @@ class NotFunctionApplicationChecker(
 
     private fun isFunction(fn: stellaParser.ExprContext): Boolean = when (fn) {
         is stellaParser.AbstractionContext -> true
+        is stellaParser.ParenthesisedExprContext -> isFunction(fn.expr())
         is stellaParser.TypeApplicationContext -> isFunction(fn.expr())
         is stellaParser.VarContext if !symbols.contains(fn.name!!.text!!, fn) -> false
         is stellaParser.VarContext -> when (val decl = symbols.get(fn.name!!.text!!, fn)) {
