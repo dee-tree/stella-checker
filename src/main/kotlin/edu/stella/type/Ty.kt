@@ -57,11 +57,15 @@ data class FunTy(
         return true
     }
 
-    private val normalized: FunTy
-        get() = when (ret) {
-            is FunTy -> FunTy(ret.ret, params + ret.params, astType)
+    private val normalized: FunTy // a, b, c -> d  === a, b -> (c -> d) === a -> (b -> (c -> d))
+        get() = when {
+            params.size > 1 -> FunTy(FunTy(ret, listOf(params.first())).normalized, params.subList(0, params.size - 1), astType).normalized
             else -> this
         }
+//        get() = when (ret) {
+//            is FunTy -> FunTy(ret.ret, params + ret.params, astType)
+//            else -> this
+//        }
 }
 
 data class TupleTy(

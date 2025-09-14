@@ -70,4 +70,38 @@ class StellaTypeChecker(
         super.visitNatRec(ctx)
     }
 
+    override fun visitApplication(ctx: stellaParser.ApplicationContext) {
+        (types[ctx.func!!] as? FunTy)?.let { funTy ->
+            ctx.args.zip(funTy.params).forEach { (arg, ty) ->
+                types.expect(arg, ty)
+            }
+        }
+
+
+        super.visitApplication(ctx)
+    }
+
+    override fun visitTuple(ctx: stellaParser.TupleContext) {
+        types.check(ctx, deep = false) {
+            DiagUnexpectedTuple(ctx, types.getExpectation(ctx) ?: BadTy())
+        }
+        super.visitTuple(ctx)
+    }
+
+    override fun visitSucc(ctx: stellaParser.SuccContext) {
+        types.expect(ctx.expr(), NatTy())
+        super.visitSucc(ctx)
+    }
+
+    override fun visitPred(ctx: stellaParser.PredContext) {
+        types.expect(ctx.expr(), NatTy())
+        super.visitPred(ctx)
+    }
+
+    override fun visitIsZero(ctx: stellaParser.IsZeroContext) {
+        types.expect(ctx.expr(), NatTy())
+        types.expect(ctx, BoolTy())
+        super.visitIsZero(ctx)
+    }
+
 }

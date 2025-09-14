@@ -82,3 +82,12 @@ class DiagUnexpectedParameterType(
     parameter.getParent() ?: parameter,
     { "Unexpected parameter ${parameter.name!!.text!!.quote()} type. Expected ${expectedTy.toString().quote()}, but got ${getText(parameter.paramType!!).quote()}" }
 )
+
+class DiagUnexpectedTuple(
+    tuple: stellaParser.TupleContext,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_TUPLE,
+    tuple.getParent() ?: tuple,
+    { "Expected an expression of type ${expectedTy.toString().quote()}, but got tuple ${getText(tuple).quote()}" }
+)
