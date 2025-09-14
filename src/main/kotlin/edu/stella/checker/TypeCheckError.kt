@@ -100,3 +100,24 @@ class DiagUnexpectedRecord(
     record.getParent() ?: record,
     { "Expected an expression of type ${expectedTy.toString().quote()}, but got record ${getText(record).quote()}" }
 )
+
+class DiagUnexpectedVariant(
+    variant: stellaParser.VariantContext,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_VARIANT,
+    variant.getParent() ?: variant,
+    { "Expected an expression of type ${expectedTy.toString().quote()}, but got variant ${getText(variant).quote()}" }
+)
+
+class DiagUnexpectedList private constructor(
+    list: stellaParser.ExprContext,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_LIST,
+    list.getParent() ?: list,
+    { "Expected an expression of type ${expectedTy.toString().quote()}, but got list ${getText(list).quote()}" }
+) {
+    constructor(list: stellaParser.ConsListContext, expectedTy: Ty) : this(list as stellaParser.ExprContext, expectedTy)
+    constructor(list: stellaParser.ListContext, expectedTy: Ty) : this(list as stellaParser.ExprContext, expectedTy)
+}

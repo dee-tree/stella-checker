@@ -107,6 +107,22 @@ data class RecordTy(
     }
 }
 
+data class VariantTy(
+    val label: String,
+    val component: Ty,
+    override val astType: stellaParser.TypeVariantContext? = null
+) : Ty {
+    override fun toString(): String = "<$label: $component>"
+
+    override fun same(other: Ty?, deep: Boolean): Boolean {
+        if (other !is VariantTy) return false
+        if (!deep) return true
+        if (label != other.label) return false
+        if (component != other.component) return false
+        return true
+    }
+}
+
 data class ListTy(
     val of: Ty,
     override val astType: stellaParser.TypeListContext? = null

@@ -6,6 +6,7 @@ import edu.stella.core.TypeManager
 import edu.stella.type.BadTy
 import edu.stella.type.BoolTy
 import edu.stella.type.FunTy
+import edu.stella.type.ListTy
 import edu.stella.type.NatTy
 import edu.stella.type.asTy
 
@@ -41,6 +42,10 @@ class StellaTypeChecker(
 
     override fun visitIf(ctx: stellaParser.IfContext) {
         types.expect(ctx.condition!!, BoolTy())
+        types.getExpectation(ctx)?.let { retTy ->
+            types.expect(ctx.thenExpr!!, retTy)
+            types.expect(ctx.elseExpr!!, retTy)
+        }
         super.visitIf(ctx)
     }
 
@@ -95,6 +100,13 @@ class StellaTypeChecker(
         super.visitRecord(ctx)
     }
 
+    override fun visitVariant(ctx: stellaParser.VariantContext) {
+        types.check(ctx, deep = false) {
+            DiagUnexpectedVariant(ctx, types.getExpectation(ctx) ?: BadTy())
+        }
+        super.visitVariant(ctx)
+    }
+
     override fun visitSucc(ctx: stellaParser.SuccContext) {
         types.expect(ctx.expr(), NatTy())
         super.visitSucc(ctx)
@@ -109,6 +121,32 @@ class StellaTypeChecker(
         types.expect(ctx.expr(), NatTy())
         types.expect(ctx, BoolTy())
         super.visitIsZero(ctx)
+    }
+
+    override fun visitConsList(ctx: stellaParser.ConsListContext) {
+        types.check(ctx, deep = false) {
+            DiagUnexpectedList(ctx, types.getExpectation(ctx) ?: BadTy())
+        }
+
+        types.getExpectation(ctx)?.let { listTy ->
+            types.expect(ctx.tail!!, listTy)
+        }
+
+        super.visitConsList(ctx)
+    }
+
+    override fun visitList(ctx: stellaParser.ListContext) {
+        types.check(ctx, deep = false) {
+            DiagUnexpectedList(ctx, types.getExpectation(ctx) ?: BadTy())
+        }
+
+        (types.getExpectation(ctx) as? ListTy)?.let { expectedList ->
+            ctx.exprs.forEach { element ->
+                types.expect(element, expectedList.of)
+            }
+        }
+
+        super.visitList(ctx)
     }
 
 }

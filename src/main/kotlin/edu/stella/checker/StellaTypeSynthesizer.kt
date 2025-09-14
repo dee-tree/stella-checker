@@ -4,11 +4,13 @@ import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.type.BadTy
 import edu.stella.type.BoolTy
 import edu.stella.type.FunTy
+import edu.stella.type.ListTy
 import edu.stella.type.NatTy
 import edu.stella.type.RecordTy
 import edu.stella.type.TupleTy
 import edu.stella.type.Ty
 import edu.stella.type.UnitTy
+import edu.stella.type.VariantTy
 import edu.stella.type.asTy
 
 class StellaTypeSynthesizer(
@@ -143,6 +145,36 @@ class StellaTypeSynthesizer(
         ctx.expr().accept(this)
 
         // Do not call super.visitLet() since it is visited in manual order
+    }
+
+    override fun visitVariant(ctx: stellaParser.VariantContext) {
+        super.visitVariant(ctx)
+
+        types.learn(ctx, VariantTy(ctx.label!!.text!!, types[ctx.expr()!!] ?: BadTy(ctx.expr())))
+    }
+
+    override fun visitIf(ctx: stellaParser.IfContext) {
+        super.visitIf(ctx)
+
+        val ty = types[ctx.thenExpr!!].let {
+            val ty = if (it is BadTy) types[ctx.elseExpr!!] else it
+            ty ?: BadTy(ctx)
+        }
+
+        types.learn(ctx, ty)
+    }
+
+    override fun visitConsList(ctx: stellaParser.ConsListContext) {
+        super.visitConsList(ctx)
+
+        val of = types[ctx.head!!] ?: BadTy(ctx.head)
+        types.learn(ctx, ListTy(of))
+    }
+
+    override fun visitList(ctx: stellaParser.ListContext) {
+        super.visitList(ctx)
+        val of = types[ctx.exprs.first()] ?: BadTy(ctx)
+        types.learn(ctx, ListTy(of))
     }
 
 
