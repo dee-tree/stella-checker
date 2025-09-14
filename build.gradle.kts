@@ -60,8 +60,10 @@ kotlin {
     }
 }
 
+private val mainFQName = "edu.stella.MainKt"
+
 application {
-    mainClass = "edu.stella.checker.MainKt"
+    mainClass = mainFQName
 }
 
 val run by tasks.getting(JavaExec::class) {
