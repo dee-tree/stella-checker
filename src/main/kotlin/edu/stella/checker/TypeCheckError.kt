@@ -3,6 +3,7 @@ package edu.stella.checker
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.core.Diag
 import edu.stella.core.quote
+import edu.stella.type.TupleTy
 import edu.stella.type.Ty
 import org.antlr.v4.kotlinruntime.RuleContext
 import org.antlr.v4.kotlinruntime.TokenStream
@@ -162,4 +163,24 @@ class DiagUnexpectedRecordFieldAccess(
     TypeCheckErrorKind.ERROR_UNEXPECTED_FIELD_ACCESS,
     access.getParent() ?: access,
     { "Unexpected field ${unexpected.quote()} access ${getText(access).quote()} of record ${expectedTy.toString().quote()}" }
+)
+
+class DiagUnexpectedVariantLabel(
+    variant: stellaParser.VariantContext,
+    unexpected: String,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_VARIANT_LABEL,
+    variant.getParent() ?: variant,
+    { "Unexpected label ${unexpected.quote()} in variant ${getText(variant).quote()} of expected type ${expectedTy.toString().quote()}" }
+)
+
+class DiagTupleIndexOutOfBounds(
+    access: stellaParser.DotTupleContext,
+    index: Int,
+    expectedTy: TupleTy
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_TUPLE_INDEX_OUT_OF_BOUNDS,
+    access.getParent() ?: access,
+    { "Tuple item access ${index.toString().quote()} out of bound in ${getText(access).quote()} of expected type ${expectedTy.toString().quote()} (1..${expectedTy.components.indices.last + 1})" }
 )

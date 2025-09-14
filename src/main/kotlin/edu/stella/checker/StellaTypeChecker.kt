@@ -10,7 +10,9 @@ import edu.stella.type.ListTy
 import edu.stella.type.NatTy
 import edu.stella.type.RecordTy
 import edu.stella.type.SumTy
+import edu.stella.type.TupleTy
 import edu.stella.type.Ty
+import edu.stella.type.VariantTy
 import edu.stella.type.asTy
 
 class StellaTypeChecker(
@@ -110,6 +112,18 @@ class StellaTypeChecker(
         super.visitTuple(ctx)
     }
 
+    override fun visitDotTuple(ctx: stellaParser.DotTupleContext) {
+        val idx = ctx.index!!.text!!.toInt() - 1
+
+        (types[ctx.expr()] as? TupleTy)?.let { tupleTy ->
+            if (idx !in tupleTy.components.indices) {
+                diag.diag(DiagTupleIndexOutOfBounds(ctx, idx + 1, tupleTy))
+            }
+        }
+
+        super.visitDotTuple(ctx)
+    }
+
     override fun visitRecord(ctx: stellaParser.RecordContext) {
         types.check(ctx, deep = false) {
             DiagUnexpectedRecord(ctx, types.getExpectation(ctx) ?: BadTy())
@@ -158,6 +172,15 @@ class StellaTypeChecker(
         types.check(ctx, deep = false) {
             DiagUnexpectedVariant(ctx, types.getExpectation(ctx) ?: BadTy())
         }
+
+        (types.getExpectation(ctx) as? VariantTy)?.let { ty ->
+            val expectedTags = ty.tags
+            val actualTag = ctx.label!!.text!!
+            if (actualTag !in expectedTags) {
+                diag.diag(DiagUnexpectedVariantLabel(ctx, actualTag, ty))
+            }
+        }
+
         super.visitVariant(ctx)
     }
 

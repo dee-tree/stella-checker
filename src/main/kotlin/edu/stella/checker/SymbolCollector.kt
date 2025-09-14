@@ -30,6 +30,11 @@ class SymbolCollector() : stellaParserBaseVisitor<SymbolTable>() {
         return super.visitParamDecl(ctx)
     }
 
+    override fun visitMatchCase(ctx: stellaParser.MatchCaseContext): SymbolTable {
+        table.push(ctx)
+        return super.visitMatchCase(ctx).also { table.pop() }
+    }
+
     override fun visitPatternVar(ctx: stellaParser.PatternVarContext): SymbolTable {
         table.add(ctx)
         return super.visitPatternVar(ctx)
