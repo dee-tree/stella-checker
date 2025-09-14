@@ -14,6 +14,8 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
     fun learn(node: ParseTree, ty: Ty) {
         if (node in context) throw StellaCompileException("Ty of ${node.text} is already known")
         context[node] = ty
+        if (node is stellaParser.ParenthesisedExprContext) context[node.expr()] = ty
+        if (node is stellaParser.TerminatingSemicolonContext) context[node.expr()] = ty
     }
 
     private fun getTy(node: ParseTree, storage: Map<ParseTree, Ty>): Ty? {
@@ -21,6 +23,7 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
 
         return when (node) {
             is stellaParser.ParenthesisedExprContext -> getTy(node.expr(), storage)
+            is stellaParser.TerminatingSemicolonContext -> getTy(node.expr(), storage)
             else -> null
         }
     }
@@ -33,13 +36,16 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
         if (node in expectation)
             throw StellaCompileException("Ty of ${node.text} is already expected as ${expectation[node]}}")
         expectation[node] = ty
+
+        if (node is stellaParser.ParenthesisedExprContext) expectation[node.expr()] = ty
+        if (node is stellaParser.TerminatingSemicolonContext) expectation[node.expr()] = ty
     }
 
     fun check(node: ParseTree, deep: Boolean = true, diag: (() -> Diag)? = null) {
         val knownTy = this[node]
         val expectedTy = getExpectation(node) ?: return // No expectations => any is possible
 //            ?: throw StellaCompileException("Cannot check types without expectation for node ${node.text.quote()}")
-        if (expectedTy.same(knownTy, deep)) return
+        if (expectedTy.same(knownTy, deep) || knownTy == null) return
 
         diagEngine.diag(diag?.invoke() ?: DiagUnexpectedTypeForExpr(node as RuleContext, expectedTy, knownTy))
     }

@@ -121,3 +121,45 @@ class DiagUnexpectedList private constructor(
     constructor(list: stellaParser.ConsListContext, expectedTy: Ty) : this(list as stellaParser.ExprContext, expectedTy)
     constructor(list: stellaParser.ListContext, expectedTy: Ty) : this(list as stellaParser.ExprContext, expectedTy)
 }
+
+class DiagUnexpectedInjection private constructor(
+    injection: stellaParser.ExprContext,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_INJECTION,
+    injection.getParent() ?: injection,
+    { "Expected an expression of type ${expectedTy.toString().quote()}, but got injection ${getText(injection).quote()}" }
+) {
+    constructor(injection: stellaParser.InlContext, expectedTy: Ty) : this(injection as stellaParser.ExprContext, expectedTy)
+    constructor(injection: stellaParser.InrContext, expectedTy: Ty) : this(injection as stellaParser.ExprContext, expectedTy)
+}
+
+class DiagMissingRecordField(
+    record: stellaParser.RecordContext,
+    missing: String,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_MISSING_RECORD_FIELDS,
+    record.getParent() ?: record,
+    { "Missing field ${missing.quote()} in record ${getText(record).quote()} of expected type ${expectedTy.toString().quote()}" }
+)
+
+class DiagUnexpectedRecordField(
+    record: stellaParser.RecordContext,
+    unexpected: String,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_RECORD_FIELDS,
+    record.getParent() ?: record,
+    { "Unexpected field ${unexpected.quote()} in record ${getText(record).quote()} of expected type ${expectedTy.toString().quote()}" }
+)
+
+class DiagUnexpectedRecordFieldAccess(
+    access: stellaParser.DotRecordContext,
+    unexpected: String,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_FIELD_ACCESS,
+    access.getParent() ?: access,
+    { "Unexpected field ${unexpected.quote()} access ${getText(access).quote()} of record ${expectedTy.toString().quote()}" }
+)

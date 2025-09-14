@@ -30,6 +30,11 @@ class SymbolCollector() : stellaParserBaseVisitor<SymbolTable>() {
         return super.visitParamDecl(ctx)
     }
 
+    override fun visitPatternVar(ctx: stellaParser.PatternVarContext): SymbolTable {
+        table.add(ctx)
+        return super.visitPatternVar(ctx)
+    }
+
 //    override fun visitBinding(ctx: stellaParser.BindingContext): SymbolTable {
 //        table.add(ctx)
 //        table.push(ctx)

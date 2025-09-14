@@ -44,6 +44,7 @@ class SymbolTable(val program: stellaParser.ProgramContext) {
     fun add(decl: stellaParser.ParamDeclContext) = scope.add(decl)
     fun add(decl: stellaParser.BindingContext) = scope.add(decl)
     fun add(decl: stellaParser.LetContext) = scope.add(decl)
+    fun add(decl: stellaParser.PatternVarContext) = scope.add(decl)
 }
 
 private class SymbolScope private constructor(
@@ -78,6 +79,8 @@ private class SymbolScope private constructor(
             is stellaParser.PatternVarContext -> add(pat.name!!.text!!, pat)
         }
     }
+    fun add(decl: stellaParser.PatternVarContext) = add(decl.name!!.text!!, decl)
+
 
     val isGlobal: Boolean
         get() = parent == null

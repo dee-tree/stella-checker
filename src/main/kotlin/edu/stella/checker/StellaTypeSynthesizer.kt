@@ -115,6 +115,16 @@ class StellaTypeSynthesizer(
         types.learn(ctx, TupleTy(tys))
     }
 
+    override fun visitDotRecord(ctx: stellaParser.DotRecordContext) {
+        super.visitDotRecord(ctx)
+
+        (types[ctx.expr()] as? RecordTy)?.let { recTy ->
+            recTy.getComponentTyOrNull(ctx.label!!.text!!)?.let { componentTy ->
+                types.learn(ctx, componentTy)
+            }
+        }
+    }
+
     override fun visitRecord(ctx: stellaParser.RecordContext) {
         super.visitRecord(ctx)
 
@@ -150,7 +160,7 @@ class StellaTypeSynthesizer(
     override fun visitVariant(ctx: stellaParser.VariantContext) {
         super.visitVariant(ctx)
 
-        types.learn(ctx, VariantTy(ctx.label!!.text!!, types[ctx.expr()!!] ?: BadTy(ctx.expr())))
+        types.learn(ctx, VariantTy(listOf(ctx.label!!.text!! to (types[ctx.expr()!!] ?: BadTy(ctx.expr())))))
     }
 
     override fun visitIf(ctx: stellaParser.IfContext) {
@@ -173,7 +183,7 @@ class StellaTypeSynthesizer(
 
     override fun visitList(ctx: stellaParser.ListContext) {
         super.visitList(ctx)
-        val of = types[ctx.exprs.first()] ?: BadTy(ctx)
+        val of = types[ctx.exprs.firstOrNull() ?: return] ?: BadTy(ctx)
         types.learn(ctx, ListTy(of))
     }
 

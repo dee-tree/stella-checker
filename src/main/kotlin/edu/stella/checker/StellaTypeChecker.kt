@@ -8,6 +8,9 @@ import edu.stella.type.BoolTy
 import edu.stella.type.FunTy
 import edu.stella.type.ListTy
 import edu.stella.type.NatTy
+import edu.stella.type.RecordTy
+import edu.stella.type.SumTy
+import edu.stella.type.Ty
 import edu.stella.type.asTy
 
 class StellaTypeChecker(
@@ -49,6 +52,15 @@ class StellaTypeChecker(
         super.visitIf(ctx)
     }
 
+    override fun visitMatch(ctx: stellaParser.MatchContext) {
+        types.getExpectation(ctx)?.let { retTy ->
+            ctx.cases.forEach { cs ->
+                types.expect(cs.expr(), retTy)
+            }
+        }
+        super.visitMatch(ctx)
+    }
+
     override fun visitAbstraction(ctx: stellaParser.AbstractionContext) {
         types.check(ctx, deep = false) {
             DiagUnexpectedLambda(ctx, types.getExpectation(ctx))
@@ -76,12 +88,17 @@ class StellaTypeChecker(
     }
 
     override fun visitApplication(ctx: stellaParser.ApplicationContext) {
+        val paramTys = mutableListOf<Ty>()
         (types[ctx.func!!] as? FunTy)?.let { funTy ->
             ctx.args.zip(funTy.params).forEach { (arg, ty) ->
                 types.expect(arg, ty)
+                paramTys += ty
             }
         }
 
+        (types.getExpectation(ctx) ?: types[ctx]) ?.let { retTy ->
+            types.expect(ctx.func!!, FunTy(retTy, paramTys))
+        }
 
         super.visitApplication(ctx)
     }
@@ -97,7 +114,44 @@ class StellaTypeChecker(
         types.check(ctx, deep = false) {
             DiagUnexpectedRecord(ctx, types.getExpectation(ctx) ?: BadTy())
         }
+
+        (types.getExpectation(ctx) as? RecordTy)?.let { ty ->
+            val expectedLabels = ty.labels
+            val actualLabels = (ctx.bindings.mapTo(hashSetOf()) { it.name!!.text!! }) as Set<String>
+            for (label in expectedLabels) {
+                if (label !in actualLabels) {
+                    diag.diag(DiagMissingRecordField(ctx, label, ty))
+                }
+            }
+
+            for (actualLabel in actualLabels) {
+                if (actualLabel !in expectedLabels) {
+                    diag.diag(DiagUnexpectedRecordField(ctx, actualLabel, ty))
+                }
+            }
+
+            for (binding in ctx.bindings) {
+                val (label, expr) = binding.name!!.text!! to binding.expr()
+
+                ty.getComponentTyOrNull(label)?.let { componentTy ->
+                    types.expect(expr, componentTy)
+                }
+            }
+        }
+
         super.visitRecord(ctx)
+    }
+
+    override fun visitDotRecord(ctx: stellaParser.DotRecordContext) {
+        val label = ctx.label!!.text!!
+        (types[ctx.expr()] as? RecordTy)?.let { recTy ->
+            if (label !in recTy.labels) {
+                diag.diag(DiagUnexpectedRecordFieldAccess(ctx, label, recTy))
+            }
+        }
+
+        super.visitDotRecord(ctx)
+
     }
 
     override fun visitVariant(ctx: stellaParser.VariantContext) {
@@ -128,9 +182,8 @@ class StellaTypeChecker(
             DiagUnexpectedList(ctx, types.getExpectation(ctx) ?: BadTy())
         }
 
-        types.getExpectation(ctx)?.let { listTy ->
-            types.expect(ctx.tail!!, listTy)
-        }
+        val listTy = (types.getExpectation(ctx) as? ListTy) ?: ListTy(BadTy())
+        types.expect(ctx.tail!!, listTy)
 
         super.visitConsList(ctx)
     }
@@ -146,7 +199,41 @@ class StellaTypeChecker(
             }
         }
 
+        types.getExpectation(ctx)?.let { ty ->
+            if (ty !is ListTy && types[ctx] == null) {
+                diag.diag(DiagUnexpectedList(ctx, ty))
+            }
+        }
+
         super.visitList(ctx)
+    }
+
+    override fun visitInl(ctx: stellaParser.InlContext) {
+        (types.getExpectation(ctx) as? SumTy)?.let { sumTy ->
+            types.expect(ctx.expr(), sumTy.left)
+        }
+
+        types.getExpectation(ctx)?.let { otherTy ->
+            if (otherTy !is SumTy) {
+                diag.diag(DiagUnexpectedInjection(ctx, otherTy))
+            }
+        }
+
+        super.visitInl(ctx)
+    }
+
+    override fun visitInr(ctx: stellaParser.InrContext) {
+        (types.getExpectation(ctx) as? SumTy)?.let { sumTy ->
+            types.expect(ctx.expr(), sumTy.right)
+        }
+
+        types.getExpectation(ctx)?.let { otherTy ->
+            if (otherTy !is SumTy) {
+                diag.diag(DiagUnexpectedInjection(ctx, otherTy))
+            }
+        }
+
+        super.visitInr(ctx)
     }
 
 }

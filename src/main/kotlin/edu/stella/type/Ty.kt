@@ -89,7 +89,7 @@ data class RecordTy(
     val components: List<Pair<String, Ty>>,
     override val astType: stellaParser.TypeRecordContext? = null
 ) : Ty {
-    override fun toString(): String = components.joinToString(", ", prefix = "(", postfix = ")") { component ->
+    override fun toString(): String = components.joinToString(", ", prefix = "{", postfix = "}") { component ->
         "${component.first}: ${component.second}"
     }
 
@@ -105,20 +105,36 @@ data class RecordTy(
         }
         return true
     }
+
+    val labels: Set<String>
+        get() = components.map { (label, _) -> label }.toSet()
+
+    fun getComponentTyOrNull(label: String): Ty? {
+        for ((recLabel, ty) in components) {
+            if (label == recLabel) return ty
+        }
+        return null
+    }
 }
 
 data class VariantTy(
-    val label: String,
-    val component: Ty,
+    val components: List<Pair<String, Ty>>,
     override val astType: stellaParser.TypeVariantContext? = null
 ) : Ty {
-    override fun toString(): String = "<$label: $component>"
+    override fun toString(): String = components.joinToString(", ", prefix = "<", postfix = ">") { component ->
+        "${component.first}: ${component.second}"
+    }
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
         if (other !is VariantTy) return false
         if (!deep) return true
-        if (label != other.label) return false
-        if (component != other.component) return false
+        if (components.size != other.components.size) return false
+        components.zip(other.components).forEach { (a, b) ->
+            val (an, at) = a
+            val (bn, bt) = b
+            if (an != bn) return false
+            if (!at.same(bt, deep)) return false
+        }
         return true
     }
 }
@@ -143,5 +159,21 @@ data class UnitTy(
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
         return other is UnitTy
+    }
+}
+
+data class SumTy(
+    val left: Ty,
+    val right: Ty,
+    override val astType: stellaParser.TypeSumContext? = null
+) : Ty {
+    override fun toString(): String = "$left + $right"
+
+    override fun same(other: Ty?, deep: Boolean): Boolean {
+        if (other !is SumTy) return false
+        if (!deep) return true
+        if (!(left same other.left)) return false
+        if (!(right same other.right)) return false
+        return true
     }
 }
