@@ -194,12 +194,12 @@ class DiagUnexpectedTupleLength(
     { "Unexpected tuple ${getText(tuple).quote()} length (${tuple.exprs.size}) of expected type ${expectedTy.toString().quote()} (${expectedTy.components.size})" }
 )
 
-class DiagAmbiguousVariantType(
-    variant: stellaParser.ExprContext,
+class DiagAmbiguousSumTypeType(
+    expr: stellaParser.ExprContext,
 ) : TypeCheckError(
-    TypeCheckErrorKind.ERROR_AMBIGUOUS_VARIANT_TYPE,
-    variant.getParent() ?: variant,
-    { "Ambiguous variant ${getText(variant).quote()} type. Please, specify expected type" }
+    TypeCheckErrorKind.ERROR_AMBIGUOUS_SUM_TYPE,
+    expr.getParent() ?: expr,
+    { "Ambiguous sum-type expression ${getText(expr).quote()}. Please, specify expected type explicitly" }
 ) {
     constructor(inl: stellaParser.InlContext) : this(inl as stellaParser.ExprContext)
     constructor(inr: stellaParser.InrContext) : this(inr as stellaParser.ExprContext)

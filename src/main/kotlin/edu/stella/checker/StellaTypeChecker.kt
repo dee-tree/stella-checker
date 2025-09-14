@@ -250,7 +250,7 @@ class StellaTypeChecker(
         }
 
         if (types[ctx] == null) {
-            diag.diag(DiagAmbiguousVariantType(ctx))
+            diag.diag(DiagAmbiguousSumTypeType(ctx))
         }
 
         super.visitInl(ctx)
@@ -268,7 +268,7 @@ class StellaTypeChecker(
         }
 
         if (types[ctx] == null) {
-            diag.diag(DiagAmbiguousVariantType(ctx))
+            diag.diag(DiagAmbiguousSumTypeType(ctx))
         }
 
         super.visitInr(ctx)
