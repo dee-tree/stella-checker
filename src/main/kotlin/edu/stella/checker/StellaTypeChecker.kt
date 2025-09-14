@@ -88,6 +88,13 @@ class StellaTypeChecker(
         super.visitTuple(ctx)
     }
 
+    override fun visitRecord(ctx: stellaParser.RecordContext) {
+        types.check(ctx, deep = false) {
+            DiagUnexpectedRecord(ctx, types.getExpectation(ctx) ?: BadTy())
+        }
+        super.visitRecord(ctx)
+    }
+
     override fun visitSucc(ctx: stellaParser.SuccContext) {
         types.expect(ctx.expr(), NatTy())
         super.visitSucc(ctx)

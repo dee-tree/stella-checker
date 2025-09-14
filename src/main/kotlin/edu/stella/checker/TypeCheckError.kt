@@ -91,3 +91,12 @@ class DiagUnexpectedTuple(
     tuple.getParent() ?: tuple,
     { "Expected an expression of type ${expectedTy.toString().quote()}, but got tuple ${getText(tuple).quote()}" }
 )
+
+class DiagUnexpectedRecord(
+    record: stellaParser.RecordContext,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_RECORD,
+    record.getParent() ?: record,
+    { "Expected an expression of type ${expectedTy.toString().quote()}, but got record ${getText(record).quote()}" }
+)
