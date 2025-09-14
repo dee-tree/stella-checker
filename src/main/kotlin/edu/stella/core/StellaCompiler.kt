@@ -10,14 +10,16 @@ import org.antlr.v4.kotlinruntime.StringCharStream
 class StellaCompiler(private val sourceCode: String) {
     private val lexer = stellaLexer(StringCharStream(sourceCode, SOURCE_CODE_NAME))
     private val tokenStream = CommonTokenStream(lexer)
-    val diagEngine = DiagnosticsEngine(tokenStream)
     private val parser = stellaParser(tokenStream)
+
+    val diagEngine = DiagnosticsEngine(tokenStream)
+    val typeManager = TypeManager(diagEngine)
 
     fun compile() {
         val ast = parser.program()
         val symbols = ast.accept(SymbolCollector())
 
-        StellaTypeChecker(ast, symbols, diagEngine).check()
+        StellaTypeChecker(ast, symbols, typeManager, diagEngine).check()
     }
 
     companion object {

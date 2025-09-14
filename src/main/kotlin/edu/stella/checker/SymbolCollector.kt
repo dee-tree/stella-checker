@@ -3,7 +3,7 @@ package edu.stella.checker
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import com.strumenta.antlrkotlin.parsers.generated.stellaParserBaseVisitor
 
-class SymbolCollector : stellaParserBaseVisitor<SymbolTable>() {
+class SymbolCollector() : stellaParserBaseVisitor<SymbolTable>() {
     private lateinit var table: SymbolTable
 
     override fun defaultResult(): SymbolTable = table

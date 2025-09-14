@@ -1,13 +1,10 @@
 package edu.stella.checker
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
-import com.strumenta.antlrkotlin.parsers.generated.stellaParserBaseVisitor
-import edu.stella.core.DiagnosticsEngine
 
 class UndefinedVariableChecker(
-    private val symbols: SymbolTable,
-    private val diag: DiagnosticsEngine
-) : stellaParserBaseVisitor<Unit>() {
+    private val delegate: SemaStage<Unit>
+) : SemaASTVisitor<Unit>(), SemaStage<Unit> by delegate {
     override fun defaultResult() = Unit
 
     override fun visitVar(ctx: stellaParser.VarContext) {
