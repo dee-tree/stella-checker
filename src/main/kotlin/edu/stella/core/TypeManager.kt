@@ -15,6 +15,7 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
         if (node in context) throw StellaCompileException("Ty of ${node.text} is already known")
         context[node] = ty
         if (node is stellaParser.ParenthesisedExprContext) context[node.expr()] = ty
+        if (node is stellaParser.TypeAscContext) context[node.expr()] = ty
         if (node is stellaParser.TerminatingSemicolonContext) context[node.expr()] = ty
     }
 
@@ -23,6 +24,7 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
 
         return when (node) {
             is stellaParser.ParenthesisedExprContext -> getTy(node.expr(), storage)
+            is stellaParser.TypeAscContext -> getTy(node.expr(), storage)
             is stellaParser.TerminatingSemicolonContext -> getTy(node.expr(), storage)
             else -> null
         }

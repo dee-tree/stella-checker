@@ -193,3 +193,14 @@ class DiagUnexpectedTupleLength(
     tuple.getParent() ?: tuple,
     { "Unexpected tuple ${getText(tuple).quote()} length (${tuple.exprs.size}) of expected type ${expectedTy.toString().quote()} (${expectedTy.components.size})" }
 )
+
+class DiagAmbiguousVariantType(
+    variant: stellaParser.ExprContext,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_AMBIGUOUS_VARIANT_TYPE,
+    variant.getParent() ?: variant,
+    { "Ambiguous variant ${getText(variant).quote()} type. Please, specify expected type" }
+) {
+    constructor(inl: stellaParser.InlContext) : this(inl as stellaParser.ExprContext)
+    constructor(inr: stellaParser.InrContext) : this(inr as stellaParser.ExprContext)
+}

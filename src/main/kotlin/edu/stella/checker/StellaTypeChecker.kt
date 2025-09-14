@@ -249,6 +249,10 @@ class StellaTypeChecker(
             }
         }
 
+        if (types[ctx] == null) {
+            diag.diag(DiagAmbiguousVariantType(ctx))
+        }
+
         super.visitInl(ctx)
     }
 
@@ -261,6 +265,10 @@ class StellaTypeChecker(
             if (otherTy !is SumTy) {
                 diag.diag(DiagUnexpectedInjection(ctx, otherTy))
             }
+        }
+
+        if (types[ctx] == null) {
+            diag.diag(DiagAmbiguousVariantType(ctx))
         }
 
         super.visitInr(ctx)
