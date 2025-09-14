@@ -143,8 +143,8 @@ class StellaTypeSynthesizer(
     }
 
     override fun visitTypeAsc(ctx: stellaParser.TypeAscContext) {
-        types.learn(ctx, ctx.stellatype().asTy)
         super.visitTypeAsc(ctx)
+        types.learn(ctx, ctx.stellatype().asTy, override = true)
     }
 
     override fun visitLet(ctx: stellaParser.LetContext) {

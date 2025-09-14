@@ -11,8 +11,8 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
     private val context = MapAst<Ty>()
     private val expectation = MapAst<Ty>()
 
-    fun learn(node: ParseTree, ty: Ty) {
-        if (node in context) throw StellaCompileException("Ty of ${node.text} is already known")
+    fun learn(node: ParseTree, ty: Ty, override: Boolean = false) {
+        if (node in context && !override) throw StellaCompileException("Ty of ${node.text} is already known")
         context[node] = ty
         if (node is stellaParser.ParenthesisedExprContext) context[node.expr()] = ty
         if (node is stellaParser.TypeAscContext) context[node.expr()] = ty

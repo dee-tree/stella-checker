@@ -194,13 +194,37 @@ class DiagUnexpectedTupleLength(
     { "Unexpected tuple ${getText(tuple).quote()} length (${tuple.exprs.size}) of expected type ${expectedTy.toString().quote()} (${expectedTy.components.size})" }
 )
 
-class DiagAmbiguousSumTypeType(
+class DiagAmbiguousSumType(
     expr: stellaParser.ExprContext,
 ) : TypeCheckError(
     TypeCheckErrorKind.ERROR_AMBIGUOUS_SUM_TYPE,
     expr.getParent() ?: expr,
-    { "Ambiguous sum-type expression ${getText(expr).quote()}. Please, specify expected type explicitly" }
+    { "Ambiguous sum-type in expression ${getText(expr).quote()}. Please, specify expected type explicitly" }
 ) {
     constructor(inl: stellaParser.InlContext) : this(inl as stellaParser.ExprContext)
     constructor(inr: stellaParser.InrContext) : this(inr as stellaParser.ExprContext)
 }
+
+class DiagAmbiguousVariantType(
+    expr: stellaParser.VariantContext,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_AMBIGUOUS_VARIANT_TYPE,
+    expr.getParent() ?: expr,
+    { "Ambiguous variant type in expression ${getText(expr).quote()}. Please, specify expected type explicitly" }
+)
+
+class DiagAmbiguousListType(
+    list: stellaParser.ListContext,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_AMBIGUOUS_LIST,
+    list.getParent() ?: list,
+    { "Ambiguous list type in expression ${getText(list).quote()}. Please, specify expected type explicitly" }
+)
+
+class DiagEmptyMatching(
+    matching: stellaParser.MatchContext,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_ILLEGAL_EMPTY_MATCHING,
+    matching.getParent() ?: matching,
+    { "Unexpected ${"match".quote()} without cases" }
+)

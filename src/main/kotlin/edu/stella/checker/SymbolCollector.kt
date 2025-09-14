@@ -48,7 +48,7 @@ class SymbolCollector() : stellaParserBaseVisitor<SymbolTable>() {
 
     override fun visitLet(ctx: stellaParser.LetContext): SymbolTable {
         table.push(ctx)
-        table.add(ctx)
+//        table.add(ctx) // It's done in this collector
         return super.visitLet(ctx).also { table.pop() }
     }
 }

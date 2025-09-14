@@ -60,6 +60,11 @@ class StellaTypeChecker(
                 types.expect(cs.expr(), retTy)
             }
         }
+
+        if (ctx.cases.isEmpty()) {
+            diag.diag(DiagEmptyMatching(ctx))
+        }
+
         super.visitMatch(ctx)
     }
 
@@ -188,6 +193,10 @@ class StellaTypeChecker(
             }
         }
 
+        if (types.getExpectation(ctx) == null || types.getExpectation(ctx) !is VariantTy) {
+            diag.diag(DiagAmbiguousVariantType(ctx))
+        }
+
         super.visitVariant(ctx)
     }
 
@@ -235,6 +244,10 @@ class StellaTypeChecker(
             }
         }
 
+        if (types[ctx] == null) {
+            diag.diag(DiagAmbiguousListType(ctx))
+        }
+
         super.visitList(ctx)
     }
 
@@ -250,7 +263,7 @@ class StellaTypeChecker(
         }
 
         if (types[ctx] == null) {
-            diag.diag(DiagAmbiguousSumTypeType(ctx))
+            diag.diag(DiagAmbiguousSumType(ctx))
         }
 
         super.visitInl(ctx)
@@ -268,7 +281,7 @@ class StellaTypeChecker(
         }
 
         if (types[ctx] == null) {
-            diag.diag(DiagAmbiguousSumTypeType(ctx))
+            diag.diag(DiagAmbiguousSumType(ctx))
         }
 
         super.visitInr(ctx)
