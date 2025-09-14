@@ -109,6 +109,13 @@ class StellaTypeChecker(
         types.check(ctx, deep = false) {
             DiagUnexpectedTuple(ctx, types.getExpectation(ctx) ?: BadTy())
         }
+
+        (types.getExpectation(ctx) as? TupleTy)?.let { tupleTy ->
+            if (ctx.exprs.size != tupleTy.components.size) {
+                diag.diag(DiagUnexpectedTupleLength(ctx, tupleTy))
+            }
+        }
+
         super.visitTuple(ctx)
     }
 

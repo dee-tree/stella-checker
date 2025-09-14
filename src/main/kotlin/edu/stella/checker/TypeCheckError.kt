@@ -184,3 +184,12 @@ class DiagTupleIndexOutOfBounds(
     access.getParent() ?: access,
     { "Tuple item access ${index.toString().quote()} out of bound in ${getText(access).quote()} of expected type ${expectedTy.toString().quote()} (1..${expectedTy.components.indices.last + 1})" }
 )
+
+class DiagUnexpectedTupleLength(
+    tuple: stellaParser.TupleContext,
+    expectedTy: TupleTy
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_TUPLE_LENGTH,
+    tuple.getParent() ?: tuple,
+    { "Unexpected tuple ${getText(tuple).quote()} length (${tuple.exprs.size}) of expected type ${expectedTy.toString().quote()} (${expectedTy.components.size})" }
+)
