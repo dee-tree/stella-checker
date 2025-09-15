@@ -25,6 +25,7 @@ class StellaTypeChecker(
     fun check() {
         StellaTypeSynthesizer(this).synthesize(program)
         program.accept(this)
+        types.checkRemaining()
     }
 
     override fun defaultResult() = Unit
