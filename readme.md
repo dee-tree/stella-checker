@@ -15,3 +15,10 @@ This project is a practice-related task for educational purposes of "type system
 ## Run
 
 `./gradlew run`
+
+
+
+An example of run:
+
+![img-sanity-test](pictures/sanity.png)
+![img-sanity-run](pictures/sanity-run.png)
