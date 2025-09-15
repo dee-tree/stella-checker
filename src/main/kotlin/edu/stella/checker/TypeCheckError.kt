@@ -253,3 +253,31 @@ class DiagUnexpectedPatternForType(
     pattern.getParent() ?: pattern,
     { "Unexpected pattern ${getText(pattern).quote()} for type ${ofType.toString().quote()} }" }
 )
+
+class DiagDuplicatingRecordField(
+    record: stellaParser.RecordContext,
+    field: String,
+    expectedTy: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_DUPLICATE_RECORD_FIELDS,
+    record.getParent() ?: record,
+    { "Duplicated field ${field.quote()} in record ${getText(record).quote()} of expected type ${expectedTy.toString().quote()}" }
+)
+
+class DiagDuplicatingRecordTypeField(
+    record: stellaParser.TypeRecordContext,
+    field: String,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_DUPLICATE_RECORD_TYPE_FIELDS,
+    record.getParent() ?: record,
+    { "Duplicated field ${field.quote()} in record type ${getText(record).quote()}" }
+)
+
+class DiagDuplicatingVariantTypeField(
+    variant: stellaParser.TypeVariantContext,
+    field: String,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_DUPLICATE_VARIANT_TYPE_FIELDS,
+    variant.getParent() ?: variant,
+    { "Duplicated field ${field.quote()} in variant type ${getText(variant).quote()}" }
+)

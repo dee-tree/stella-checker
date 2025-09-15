@@ -165,6 +165,10 @@ class StellaTypeChecker(
                     types.expect(expr, componentTy)
                 }
             }
+
+            ctx.bindings.groupBy { it.name!!.text!! }.forEach { label, repeat ->
+                if (repeat.size > 1) diag.diag(DiagDuplicatingRecordField(ctx, label, ty))
+            }
         }
 
         super.visitRecord(ctx)
@@ -179,7 +183,13 @@ class StellaTypeChecker(
         }
 
         super.visitDotRecord(ctx)
+    }
 
+    override fun visitTypeRecord(ctx: stellaParser.TypeRecordContext) {
+        ctx.fieldTypes.groupBy { it.label!!.text!! }.forEach { label, repeat ->
+            if (repeat.size > 1) diag.diag(DiagDuplicatingRecordTypeField(ctx, label))
+        }
+        super.visitTypeRecord(ctx)
     }
 
     override fun visitVariant(ctx: stellaParser.VariantContext) {
@@ -200,6 +210,13 @@ class StellaTypeChecker(
         }
 
         super.visitVariant(ctx)
+    }
+
+    override fun visitTypeVariant(ctx: stellaParser.TypeVariantContext) {
+        ctx.fieldTypes.groupBy { it.label!!.text!! }.forEach { label, repeat ->
+            if (repeat.size > 1) diag.diag(DiagDuplicatingVariantTypeField(ctx, label))
+        }
+        super.visitTypeVariant(ctx)
     }
 
     override fun visitSucc(ctx: stellaParser.SuccContext) {
