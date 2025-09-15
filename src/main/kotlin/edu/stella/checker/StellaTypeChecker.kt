@@ -65,6 +65,8 @@ class StellaTypeChecker(
             diag.diag(DiagEmptyMatching(ctx))
         }
 
+        ExhaustivenessChecker(ctx, types, diag).check()
+
         super.visitMatch(ctx)
     }
 

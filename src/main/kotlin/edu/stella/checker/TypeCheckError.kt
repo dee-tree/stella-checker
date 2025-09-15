@@ -228,3 +228,28 @@ class DiagEmptyMatching(
     matching.getParent() ?: matching,
     { "Unexpected ${"match".quote()} without cases" }
 )
+
+class DiagNonExhaustiveMatching(
+    matching: stellaParser.MatchContext,
+    uncovered: List<String>,
+    ofType: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_NONEXHAUSTIVE_MATCH_PATTERNS,
+    matching.getParent() ?: matching,
+    {
+        val uncoveredForm = if (uncovered.size > 1) "are" else "is"
+        val uncoveredList = uncovered.joinToString(", ", prefix = "[", postfix = "]") { it.quote() }
+        val uncoveredText = if (uncovered.isEmpty()) "" else "$uncoveredList $uncoveredForm uncovered"
+        "Non-exhaustive matching over ${ofType.toString().quote()} type: $uncoveredText" }
+) {
+    constructor(matching: stellaParser.MatchContext, ofType: Ty) : this(matching, emptyList(), ofType)
+}
+
+class DiagUnexpectedPatternForType(
+    pattern: stellaParser.PatternContext,
+    ofType: Ty
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_PATTERN_FOR_TYPE,
+    pattern.getParent() ?: pattern,
+    { "Unexpected pattern ${getText(pattern).quote()} for type ${ofType.toString().quote()} }" }
+)

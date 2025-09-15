@@ -138,8 +138,8 @@ data class VariantTy(
         return true
     }
 
-    val tags: Set<String>
-        get() = components.mapTo(hashSetOf<String>()) { it.first }
+    val tags: List<String>
+        get() = components.map { it.first }
 }
 
 data class ListTy(
