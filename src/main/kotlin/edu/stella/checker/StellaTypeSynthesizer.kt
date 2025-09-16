@@ -3,6 +3,7 @@ package edu.stella.checker
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.type.BadTy
 import edu.stella.type.BoolTy
+import edu.stella.type.ErrorTy
 import edu.stella.type.FunTy
 import edu.stella.type.ListTy
 import edu.stella.type.NatTy
@@ -115,6 +116,16 @@ class StellaTypeSynthesizer(
         types.learn(ctx, TupleTy(tys))
     }
 
+    override fun visitDotTuple(ctx: stellaParser.DotTupleContext) {
+        super.visitDotTuple(ctx)
+
+        (types[ctx.expr()] as? TupleTy)?.let { tuTy ->
+            tuTy.getComponentTyOrNull(ctx.index!!.text!!.toInt())?.let { componentTy ->
+                types.learn(ctx, componentTy)
+            }
+        }
+    }
+
     override fun visitDotRecord(ctx: stellaParser.DotRecordContext) {
         super.visitDotRecord(ctx)
 
@@ -187,5 +198,24 @@ class StellaTypeSynthesizer(
         types.learn(ctx, ListTy(of))
     }
 
+    override fun visitPanic(ctx: stellaParser.PanicContext) {
+        super.visitPanic(ctx)
+        types.learn(ctx, ErrorTy())
+    }
 
+    override fun visitFix(ctx: stellaParser.FixContext) {
+        super.visitFix(ctx)
+
+        (types[ctx.expr()] as? FunTy)?.let { funTy ->
+            types.learn(ctx, funTy.ret)
+        }
+    }
+
+    override fun visitNatRec(ctx: stellaParser.NatRecContext) {
+        super.visitNatRec(ctx)
+
+        types[ctx.initial!!]?.let { ty ->
+            types.learn(ctx, ty)
+        }
+    }
 }

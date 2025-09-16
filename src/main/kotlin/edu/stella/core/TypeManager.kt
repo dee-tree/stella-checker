@@ -38,8 +38,8 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
     fun getExpectation(node: ParseTree): Ty? = getTy(node, expectation)
 
     fun expect(node: ParseTree, ty: Ty) {
-        if (node in expectation)
-            throw StellaCompileException("Ty of ${node.text} is already expected as ${expectation[node]}}")
+//        if (node in expectation)
+//            throw StellaCompileException("Ty of ${node.text} is already expected as ${expectation[node]}}")
         expectation[node] = ty
         unchecked[node] = ty
 

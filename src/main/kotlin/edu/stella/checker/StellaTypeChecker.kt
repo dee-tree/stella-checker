@@ -320,7 +320,7 @@ class StellaTypeChecker(
         super.visitDeclExceptionType(ctx)
 
         if (!extensions.isExceptionTypeDeclarationEnabled) {
-            diag.diag(DiagError(ctx,) { "Extension ${ExtensionChecker.Extensions.EXCEPTION_TYPE_DECLARATION.ext.quote()} must be enabled" })
+            diag.diag(DiagError.extensionMustBeEnabled(ctx, ExtensionChecker.Extensions.EXCEPTION_TYPE_DECLARATION))
         }
 
         exceptionType = ctx.exceptionType!!.asTy
@@ -330,10 +330,18 @@ class StellaTypeChecker(
         super.visitDeclExceptionVariant(ctx)
 
         if (!extensions.isExceptionTypeVariantEnabled) {
-            diag.diag(DiagError(ctx,) { "Extension ${ExtensionChecker.Extensions.EXCEPTION_TYPE_VARIANT.ext.quote()} must be enabled" })
+            diag.diag(DiagError.extensionMustBeEnabled(ctx, ExtensionChecker.Extensions.EXCEPTION_TYPE_VARIANT))
         }
 
         exceptionType = ctx.variantType!!.asTy
+    }
+
+    override fun visitPanic(ctx: stellaParser.PanicContext) {
+        super.visitPanic(ctx)
+
+        if (!extensions.isPanicEnabled) {
+            diag.diag(DiagError.extensionMustBeEnabled(ctx, ExtensionChecker.Extensions.PANIC))
+        }
     }
 
     override fun visitThrow(ctx: stellaParser.ThrowContext) {

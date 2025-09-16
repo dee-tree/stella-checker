@@ -12,12 +12,17 @@ class ExtensionChecker(private val program: stellaParser.ProgramContext) {
         Extensions.EXCEPTION_TYPE_VARIANT in this
     }
 
+    val isPanicEnabled by lazy {
+        Extensions.PANIC in this
+    }
+
     private operator fun contains(ext: Extensions): Boolean = program.extensions.any { it is stellaParser.AnExtensionContext && ext.ext in it.extensionNames.map { it.text!! } }
 
 
     enum class Extensions(val ext: String) {
         EXCEPTION_TYPE_DECLARATION("#exception-type-declaration"),
         EXCEPTION_TYPE_VARIANT("#open-variant-exceptions"),
+        PANIC("#panic"),
 
     }
 }

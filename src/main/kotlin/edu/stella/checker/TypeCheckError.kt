@@ -297,4 +297,10 @@ class DiagError(
     TypeCheckErrorKind.ERROR,
     node,
     { message() }
-)
+) {
+    companion object {
+        fun extensionMustBeEnabled(node: RuleContext, ext: ExtensionChecker.Extensions): DiagError {
+            return DiagError(node) { "Extension ${ext.ext.quote()} must be enabled" }
+        }
+    }
+}
