@@ -1,6 +1,7 @@
 package edu.stella.checker
 
 enum class TypeCheckErrorKind {
+    ERROR,
     // Essential errors
     ERROR_MISSING_MAIN,
     ERROR_UNDEFINED_VARIABLE,
@@ -30,5 +31,9 @@ enum class TypeCheckErrorKind {
     ERROR_UNEXPECTED_PATTERN_FOR_TYPE,
     ERROR_DUPLICATE_RECORD_FIELDS,
     ERROR_DUPLICATE_RECORD_TYPE_FIELDS,
-    ERROR_DUPLICATE_VARIANT_TYPE_FIELDS
+    ERROR_DUPLICATE_VARIANT_TYPE_FIELDS,
+
+    // 2
+    ERROR_EXCEPTION_TYPE_NOT_DECLARED,
+
 }

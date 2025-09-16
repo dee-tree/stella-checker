@@ -281,3 +281,20 @@ class DiagDuplicatingVariantTypeField(
     variant.getParent() ?: variant,
     { "Duplicated field ${field.quote()} in variant type ${getText(variant).quote()}" }
 )
+
+class DiagExceptionTypeNotDeclared(
+    throwExpr: stellaParser.ThrowContext,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_EXCEPTION_TYPE_NOT_DECLARED,
+    throwExpr.getParent() ?: throwExpr,
+    { "Cannot throw exception ${getText(throwExpr).quote()} because exception type is not declared" }
+)
+
+class DiagError(
+    node: RuleContext,
+    message: TokenStream.() -> String
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR,
+    node,
+    { message() }
+)

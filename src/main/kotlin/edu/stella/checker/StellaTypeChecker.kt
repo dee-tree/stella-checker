@@ -3,6 +3,7 @@ package edu.stella.checker
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.core.DiagnosticsEngine
 import edu.stella.core.TypeManager
+import edu.stella.core.quote
 import edu.stella.type.BadTy
 import edu.stella.type.BoolTy
 import edu.stella.type.FunTy
@@ -12,6 +13,7 @@ import edu.stella.type.RecordTy
 import edu.stella.type.SumTy
 import edu.stella.type.TupleTy
 import edu.stella.type.Ty
+import edu.stella.type.UnitTy
 import edu.stella.type.VariantTy
 import edu.stella.type.asTy
 
@@ -21,6 +23,8 @@ class StellaTypeChecker(
     override val types: TypeManager,
     override val diag: DiagnosticsEngine
 ) : SemaASTVisitor<Unit>() {
+    private val extensions = ExtensionChecker(program)
+    private var exceptionType: Ty? = null
 
     fun check() {
         StellaTypeSynthesizer(this).synthesize(program)
@@ -307,4 +311,36 @@ class StellaTypeChecker(
         super.visitInr(ctx)
     }
 
+    override fun visitSequence(ctx: stellaParser.SequenceContext) {
+        types.expect(ctx.expr1!!, UnitTy())
+        super.visitSequence(ctx)
+    }
+
+    override fun visitDeclExceptionType(ctx: stellaParser.DeclExceptionTypeContext) {
+        super.visitDeclExceptionType(ctx)
+
+        if (!extensions.isExceptionTypeDeclarationEnabled) {
+            diag.diag(DiagError(ctx,) { "Extension ${ExtensionChecker.Extensions.EXCEPTION_TYPE_DECLARATION.ext.quote()} must be enabled" })
+        }
+
+        exceptionType = ctx.exceptionType!!.asTy
+    }
+
+    override fun visitDeclExceptionVariant(ctx: stellaParser.DeclExceptionVariantContext) {
+        super.visitDeclExceptionVariant(ctx)
+
+        if (!extensions.isExceptionTypeVariantEnabled) {
+            diag.diag(DiagError(ctx,) { "Extension ${ExtensionChecker.Extensions.EXCEPTION_TYPE_VARIANT.ext.quote()} must be enabled" })
+        }
+
+        exceptionType = ctx.variantType!!.asTy
+    }
+
+    override fun visitThrow(ctx: stellaParser.ThrowContext) {
+        super.visitThrow(ctx)
+
+        if (exceptionType == null) {
+            diag.diag(DiagExceptionTypeNotDeclared(ctx))
+        }
+    }
 }
