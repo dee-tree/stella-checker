@@ -7,6 +7,7 @@ class DiagnosticsEngine(private val tokenStream: TokenStream) {
         private set
 
     fun diag(diagnostic: Diag) {
+        if (hasError) return
         if (diagnostic.kind == Diag.DiagKind.ERROR) hasError = true
         System.err.println(diagnostic.toString(tokenStream))
     }
