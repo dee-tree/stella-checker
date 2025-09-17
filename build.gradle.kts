@@ -50,7 +50,7 @@ val generateStellaGrammarSource = tasks.register<AntlrKotlinTask>("generateStell
     outputDirectory = layout.buildDirectory.dir(outDir).get().asFile
 }
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(17)
 
     sourceSets {
         main {
