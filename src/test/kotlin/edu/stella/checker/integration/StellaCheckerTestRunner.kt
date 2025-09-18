@@ -51,8 +51,16 @@ class StellaCheckerTestRunner {
     fun run(
         expected: TestResult,
         sourceCode: String,
+        verbose: Boolean = true,
         testName: () -> String = { -> "" }
     ) {
+        if (verbose) {
+            val status = if (expected is TestResult.Passed) "ok" else (expected as TestResult.Failed).diag.toString()
+            println("[$status] ${testName()}:")
+            println(sourceCode)
+            println()
+        }
+
         val compiler = StellaCompiler(sourceCode)
         compiler.compile()
 
