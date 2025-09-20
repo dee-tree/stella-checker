@@ -9,6 +9,7 @@ import edu.stella.type.FunTy
 import edu.stella.type.ListTy
 import edu.stella.type.NatTy
 import edu.stella.type.RecordTy
+import edu.stella.type.SumTy
 import edu.stella.type.TupleTy
 import edu.stella.type.Ty
 import edu.stella.type.UnitTy
@@ -19,6 +20,26 @@ class StellaTypeSynthesizer(
     private val delegate: SemaStage<Unit>
 ) :  SemaASTVisitor<Unit>(),  SemaStage<Unit> by delegate {
     override fun defaultResult() = Unit
+
+    private val patternScope = mutableListOf<Ty?>()
+
+    private fun withPatternScope(ty: Ty?, action: (ty: Ty?) -> Unit) {
+        pushPatternScope(ty)
+        action(ty)
+        popPatternScope()
+    }
+
+    private fun pushPatternScope(ty: Ty?) {
+        patternScope += ty
+    }
+
+    private fun popPatternScope() {
+        patternScope.removeLast()
+    }
+
+    private val patternTyScope: Ty?
+        get() = patternScope.lastOrNull()
+
 
     fun synthesize(program: stellaParser.ProgramContext) {
         program.accept(this)
@@ -56,12 +77,16 @@ class StellaTypeSynthesizer(
 
     override fun visitParenthesisedExpr(ctx: stellaParser.ParenthesisedExprContext) {
         super.visitParenthesisedExpr(ctx)
-        types.learn(ctx, types[ctx.expr()] ?: BadTy(ctx.expr()))
+        types.getSynthesized(ctx.expr())?.let { ty ->
+            types.learn(ctx, ty)
+        }
     }
 
     override fun visitTerminatingSemicolon(ctx: stellaParser.TerminatingSemicolonContext) {
         super.visitTerminatingSemicolon(ctx)
-        types.learn(ctx, types[ctx.expr()] ?: BadTy(ctx.expr()))
+        types.getSynthesized(ctx.expr())?.let { ty ->
+            types.learn(ctx, ty)
+        }
     }
 
     override fun visitIsZero(ctx: stellaParser.IsZeroContext) {
@@ -82,8 +107,8 @@ class StellaTypeSynthesizer(
     override fun visitApplication(ctx: stellaParser.ApplicationContext) {
         super.visitApplication(ctx)
 
-        val funcTy = types[ctx.func!!] as? FunTy
-        types.learn(ctx, funcTy?.ret ?: BadTy(ctx))
+        val funcTy = types.getSynthesized(ctx.func!!) as? FunTy ?: return
+        types.learn(ctx, funcTy.ret)
     }
 
     override fun visitAbstraction(ctx: stellaParser.AbstractionContext) {
@@ -96,9 +121,63 @@ class StellaTypeSynthesizer(
 
         ctx.returnExpr!!.accept(this)
 
-        val retTy = types[ctx.returnExpr!!] ?: BadTy(ctx.returnExpr)
+        types.getSynthesized(ctx.returnExpr!!)?.let { retTy ->
+            types.learn(ctx, FunTy(retTy, paramTys))
+        }
+    }
 
-        types.learn(ctx, FunTy(retTy, paramTys))
+    override fun visitMatch(ctx: stellaParser.MatchContext) {
+        // no super call due to manual walk
+        ctx.expr().accept(this)
+
+        withPatternScope(types.getSynthesized(ctx.expr())) {
+            ctx.cases.forEach { it.accept(this) }
+            ctx.cases.firstOrNull()?.let { cs ->
+                types.getSynthesized(cs.expr())?.let { ty ->
+                    types.learn(ctx, ty)
+                }
+            }
+        }
+    }
+
+    override fun visitPatternVar(ctx: stellaParser.PatternVarContext) {
+        super.visitPatternVar(ctx)
+
+        patternTyScope?.let { ty ->
+            types.learn(ctx, ty)
+        }
+    }
+
+    override fun visitPatternVariant(ctx: stellaParser.PatternVariantContext) {
+        (patternTyScope as? VariantTy)?.let { variantTy ->
+            types.learn(ctx, variantTy)
+
+            if (ctx.pattern() == null) return
+
+            withPatternScope(variantTy.of(ctx.label!!.text!!)) {
+                super.visitPatternVariant(ctx)
+            }
+        }
+    }
+
+    override fun visitPatternInl(ctx: stellaParser.PatternInlContext) {
+        (patternTyScope as? SumTy)?.let { sumTy ->
+            types.learn(ctx, sumTy)
+
+            withPatternScope(sumTy.left) {
+                super.visitPatternInl(ctx)
+            }
+        }
+    }
+
+    override fun visitPatternInr(ctx: stellaParser.PatternInrContext) {
+        (patternTyScope as? SumTy)?.let { sumTy ->
+            types.learn(ctx, sumTy)
+
+            withPatternScope(sumTy.right) {
+                super.visitPatternInr(ctx)
+            }
+        }
     }
 
     override fun visitConstUnit(ctx: stellaParser.ConstUnitContext) {
@@ -111,7 +190,7 @@ class StellaTypeSynthesizer(
 
         val tys = mutableListOf<Ty>()
         ctx.exprs.forEach { component ->
-            val ty = types[component]!!
+            val ty = types.getSynthesized(component) ?: return
             tys += ty
         }
         types.learn(ctx, TupleTy(tys))
@@ -120,7 +199,7 @@ class StellaTypeSynthesizer(
     override fun visitDotTuple(ctx: stellaParser.DotTupleContext) {
         super.visitDotTuple(ctx)
 
-        (types[ctx.expr()] as? TupleTy)?.let { tuTy ->
+        (types.getSynthesized(ctx.expr()) as? TupleTy)?.let { tuTy ->
             tuTy.getComponentTyOrNull(ctx.index!!.text!!.toInt())?.let { componentTy ->
                 types.learn(ctx, componentTy)
             }
@@ -130,7 +209,7 @@ class StellaTypeSynthesizer(
     override fun visitDotRecord(ctx: stellaParser.DotRecordContext) {
         super.visitDotRecord(ctx)
 
-        (types[ctx.expr()] as? RecordTy)?.let { recTy ->
+        (types.getSynthesized(ctx.expr()) as? RecordTy)?.let { recTy ->
             recTy.getComponentTyOrNull(ctx.label!!.text!!)?.let { componentTy ->
                 types.learn(ctx, componentTy)
             }
@@ -142,16 +221,11 @@ class StellaTypeSynthesizer(
 
         val tys = mutableListOf<Pair<String, Ty>>()
         ctx.bindings.forEach { binding ->
-            val ty = types[binding.expr()]!!
+            val ty = types.getSynthesized(binding.expr())!!
             tys += binding.name!!.text!! to ty
         }
 
         types.learn(ctx, RecordTy(tys))
-    }
-
-    override fun visitPatternVar(ctx: stellaParser.PatternVarContext) {
-        super.visitPatternVar(ctx)
-        types.learn(ctx, getTy(ctx.name!!.text!!, ctx) ?: BadTy())
     }
 
     override fun visitTypeAsc(ctx: stellaParser.TypeAscContext) {
@@ -161,34 +235,38 @@ class StellaTypeSynthesizer(
 
     override fun visitPatternBinding(ctx: stellaParser.PatternBindingContext) {
         ctx.expr().accept(this)
-        types.learn(ctx.pattern(), types[ctx.expr()] ?: AnyTy)
+        ctx.pattern().accept(this)
+        types.learn(ctx.pattern(), types.getSynthesized(ctx.expr()) ?: AnyTy)
     }
 
     override fun visitLet(ctx: stellaParser.LetContext) {
         ctx.patternBindings.forEach { binding ->
-            binding.accept(this)
+            binding.expr().accept(this)
+
+            withPatternScope(types.getSynthesized(binding.expr())) {
+                binding.pattern().accept(this)
+            }
         }
 
         ctx.expr().accept(this)
 
+        types.getSynthesized(ctx.expr())?.let { ty ->
+            types.learn(ctx, ty)
+        }
         // Do not call super.visitLet() since it is visited in manual order
     }
 
     override fun visitVariant(ctx: stellaParser.VariantContext) {
         super.visitVariant(ctx)
-
-        val components = listOf(
-            ctx.label!!.text!! to ctx.expr()?.let { types[it] ?: BadTy(it) }
-        )
-        types.learn(ctx, VariantTy(components))
+        return // no way to synthesize variant type
     }
 
     override fun visitIf(ctx: stellaParser.IfContext) {
         super.visitIf(ctx)
 
-        val ty = types[ctx.thenExpr!!].let {
-            val ty = if (it is BadTy) types[ctx.elseExpr!!] else it
-            ty ?: BadTy(ctx)
+        val ty = types.getSynthesized(ctx.thenExpr!!).let {
+            val ty = if (it is BadTy) types.getSynthesized(ctx.elseExpr!!) else it
+            ty ?: return
         }
 
         types.learn(ctx, ty)
@@ -197,14 +275,14 @@ class StellaTypeSynthesizer(
     override fun visitConsList(ctx: stellaParser.ConsListContext) {
         super.visitConsList(ctx)
 
-        val of = types[ctx.head!!] ?: AnyTy
+        val of = types.getSynthesized(ctx.head!!) ?: return //?: AnyTy
         types.learn(ctx, ListTy(of))
     }
 
     override fun visitTail(ctx: stellaParser.TailContext) {
         super.visitTail(ctx)
 
-        val of = (types[ctx.expr()] as? ListTy) ?: ListTy(AnyTy)
+        val of = (types.getSynthesized(ctx.expr()) as? ListTy) ?: ListTy(AnyTy)
         types.learn(ctx, of)
     }
 
@@ -216,7 +294,7 @@ class StellaTypeSynthesizer(
 
     override fun visitList(ctx: stellaParser.ListContext) {
         super.visitList(ctx)
-        val of = types[ctx.exprs.firstOrNull() ?: return] ?: BadTy(ctx)
+        val of = types.getSynthesized(ctx.exprs.firstOrNull() ?: return) ?: return
         types.learn(ctx, ListTy(of))
     }
 
@@ -228,7 +306,7 @@ class StellaTypeSynthesizer(
     override fun visitFix(ctx: stellaParser.FixContext) {
         super.visitFix(ctx)
 
-        (types[ctx.expr()] as? FunTy)?.let { funTy ->
+        (types.getSynthesized(ctx.expr()) as? FunTy)?.let { funTy ->
             types.learn(ctx, funTy.ret)
         }
     }
@@ -236,7 +314,7 @@ class StellaTypeSynthesizer(
     override fun visitNatRec(ctx: stellaParser.NatRecContext) {
         super.visitNatRec(ctx)
 
-        types[ctx.initial!!]?.let { ty ->
+        types.getSynthesized(ctx.initial!!)?.let { ty ->
             types.learn(ctx, ty)
         }
     }

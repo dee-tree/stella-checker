@@ -10,7 +10,7 @@ class NotARecordChecker(
     override fun visitDotRecord(ctx: stellaParser.DotRecordContext) {
         super.visitDotRecord(ctx)
 
-        val ty = types[ctx.expr()]
+        val ty = types.getSynthesized(ctx.expr())
         if (ty?.isRecord == true) return
 
         diag.diag(DiagNotARecord(ctx.expr(), ty))

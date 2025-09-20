@@ -10,8 +10,8 @@ class NotATupleChecker(
     override fun visitDotTuple(ctx: stellaParser.DotTupleContext) {
         super.visitDotTuple(ctx)
 
-        val ty = types[ctx.expr()]
-        if (ty?.isTuple == true) return
+        val ty = types.getSynthesized(ctx.expr())
+        if (ty?.isTuple != false) return
         diag.diag(DiagNotATuple(ctx.expr(), ty))
     }
 }

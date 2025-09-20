@@ -10,5 +10,5 @@ interface SemaStage<T> {
     val types: TypeManager
     val diag: DiagnosticsEngine
 
-    fun getTy(symbol: String, scope: ParseTree): Ty? = symbols.getOrNull(symbol, scope)?.let { types[it] }
+    fun getTy(symbol: String, scope: ParseTree): Ty? = symbols.getOrNull(symbol, scope)?.let { types.getSynthesized(it) }
 }

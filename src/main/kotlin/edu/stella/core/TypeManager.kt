@@ -1,8 +1,13 @@
 package edu.stella.core
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
+import edu.stella.checker.DiagUnexpectedLambda
+import edu.stella.checker.DiagUnexpectedList
+import edu.stella.checker.DiagUnexpectedParameterType
+import edu.stella.checker.DiagUnexpectedRecord
+import edu.stella.checker.DiagUnexpectedTuple
 import edu.stella.checker.DiagUnexpectedTypeForExpr
-import edu.stella.type.BadTy
+import edu.stella.checker.DiagUnexpectedVariant
 import edu.stella.type.Ty
 import edu.stella.utils.MapAst
 import org.antlr.v4.kotlinruntime.RuleContext
@@ -32,14 +37,15 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
         }
     }
 
-    operator fun get(node: ParseTree): Ty? = getTy(node, context)
+    operator fun get(node: ParseTree): Ty? = getExpectation(node) ?: getSynthesized(node)
+
+    fun getSynthesized(node: ParseTree): Ty? = getTy(node, context)
 
     fun getExpectation(node: ParseTree): Ty? = getTy(node, expectation)
 
     fun expect(node: ParseTree, ty: Ty) {
-        if (node in expectation)
+        if (node in expectation && !(ty same expectation[node]))
             diagEngine.diag(DiagUnexpectedTypeForExpr(node as RuleContext, ty, expectation[node]!!))
-//            throw StellaCompileException("Ty of ${node.text} is already expected as ${expectation[node]}}")
         expectation[node] = ty
         unchecked[node] = ty
 
@@ -47,8 +53,8 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
         if (node is stellaParser.TerminatingSemicolonContext) expectation[node.expr()] = ty
     }
 
-    fun check(node: ParseTree, deep: Boolean = true, diag: ((expected: Ty, actual: Ty?) -> Diag)? = null) {
-        val knownTy = this[node]
+    fun check(node: ParseTree, deep: Boolean = true) {
+        val knownTy = this.getSynthesized(node)
         val expectedTy = getExpectation(node) ?: return // No expectations => any is possible
 //            ?: throw StellaCompileException("Cannot check types without expectation for node ${node.text.quote()}")
         if (expectedTy.same(knownTy, deep) || knownTy == null) {
@@ -56,13 +62,22 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
             return
         }
 
-        diagEngine.diag(diag?.invoke(expectedTy, knownTy) ?: DiagUnexpectedTypeForExpr(node as RuleContext, expectedTy, knownTy))
+        val diag = when {
+            node is stellaParser.ListContext && !expectedTy.isList -> DiagUnexpectedList(node, expectedTy)
+            node is stellaParser.ConsListContext && !expectedTy.isList -> DiagUnexpectedList(node, expectedTy)
+            node is stellaParser.ParamDeclContext -> DiagUnexpectedParameterType(node, expectedTy)
+            node is stellaParser.TupleContext && !expectedTy.isTuple -> DiagUnexpectedTuple(node, expectedTy)
+            node is stellaParser.RecordContext && !expectedTy.isRecord -> DiagUnexpectedRecord(node, expectedTy)
+            node is stellaParser.VariantContext && !expectedTy.isVariant -> DiagUnexpectedVariant(node, expectedTy)
+            node is stellaParser.AbstractionContext && !expectedTy.isFunction -> DiagUnexpectedLambda(node, expectedTy)
+            else -> DiagUnexpectedTypeForExpr(node as RuleContext, expectedTy, this.getSynthesized(node))
+        }
+        diagEngine.diag(diag)
     }
 
     fun checkRemaining() {
-        for ((node, ty) in unchecked) {
-            if (ty !is BadTy && this[node] != null &&
-                !(ty same this[node])) diagEngine.diag(DiagUnexpectedTypeForExpr(node as RuleContext, ty, this[node]))
+        for ((node, _) in expectation) {
+            check(node)
         }
     }
 

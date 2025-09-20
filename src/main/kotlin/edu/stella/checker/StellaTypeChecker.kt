@@ -60,7 +60,7 @@ class StellaTypeChecker(
     }
 
     override fun visitMatch(ctx: stellaParser.MatchContext) {
-        types.getExpectation(ctx)?.let { retTy ->
+        types[ctx]?.let { retTy ->
             ctx.cases.forEach { cs ->
                 types.expect(cs.expr(), retTy)
             }
@@ -70,20 +70,15 @@ class StellaTypeChecker(
             diag.diag(DiagEmptyMatching(ctx))
         }
 
-        ExhaustivenessChecker(ctx, types, diag).check()
-
         super.visitMatch(ctx)
+
+        ExhaustivenessChecker(ctx, types, diag).check()
     }
 
     override fun visitAbstraction(ctx: stellaParser.AbstractionContext) {
-        types.check(ctx, deep = false) { exp, act ->
-            DiagUnexpectedLambda(ctx, exp)
-        }
-
         (types.getExpectation(ctx) as? FunTy)?.let { expected ->
             expected.params.zip(ctx.paramDecls).forEach { (expTy, param) ->
                 types.expect(param, expTy)
-                types.check(param) { _, _ -> DiagUnexpectedParameterType(param, expTy) }
             }
 
             types.expect(ctx.returnExpr!!, expected.ret)
@@ -92,10 +87,19 @@ class StellaTypeChecker(
         super.visitAbstraction(ctx)
     }
 
+    override fun visitFix(ctx: stellaParser.FixContext) {
+        types.getExpectation(ctx)?.let { ty ->
+            types.expect(ctx.expr(), FunTy(ty, listOf(ty)))
+        } ?: types.getSynthesized(ctx)?.let { ty ->
+            types.expect(ctx.expr(), FunTy(ty, listOf(ty)))
+        }
+        super.visitFix(ctx)
+    }
+
     override fun visitNatRec(ctx: stellaParser.NatRecContext) {
         types.expect(ctx.n!!, NatTy())
         types.check(ctx.n!!)
-        val element = types[ctx.initial!!] ?: BadTy()
+        val element = types.getSynthesized(ctx.initial!!) ?: BadTy()
         types.expect(ctx.step!!, FunTy(FunTy(element, listOf(element)), listOf(NatTy())))
 
         super.visitNatRec(ctx)
@@ -103,25 +107,21 @@ class StellaTypeChecker(
 
     override fun visitApplication(ctx: stellaParser.ApplicationContext) {
         val paramTys = mutableListOf<Ty>()
-        (types[ctx.func!!] as? FunTy)?.let { funTy ->
+        (types.getSynthesized(ctx.func!!) as? FunTy)?.let { funTy ->
             ctx.args.zip(funTy.params).forEach { (arg, ty) ->
                 types.expect(arg, ty)
                 paramTys += ty
             }
         }
 
-        (types.getExpectation(ctx) ?: types[ctx]) ?.let { retTy ->
-            types.expect(ctx.func!!, FunTy(retTy, paramTys))
+        (types.getSynthesized(ctx.func!!) as? FunTy)?.let { funTy ->
+            types.expect(ctx, funTy.ret)
         }
 
         super.visitApplication(ctx)
     }
 
     override fun visitTuple(ctx: stellaParser.TupleContext) {
-        types.check(ctx, deep = false) { exp, act ->
-            DiagUnexpectedTuple(ctx, exp)
-        }
-
         (types.getExpectation(ctx) as? TupleTy)?.let { tupleTy ->
             if (ctx.exprs.size != tupleTy.components.size) {
                 diag.diag(DiagUnexpectedTupleLength(ctx, tupleTy))
@@ -134,7 +134,7 @@ class StellaTypeChecker(
     override fun visitDotTuple(ctx: stellaParser.DotTupleContext) {
         val idx = ctx.index!!.text!!.toInt() - 1
 
-        (types[ctx.expr()] as? TupleTy)?.let { tupleTy ->
+        (types.getSynthesized(ctx.expr()) as? TupleTy)?.let { tupleTy ->
             if (idx !in tupleTy.components.indices) {
                 diag.diag(DiagTupleIndexOutOfBounds(ctx, idx + 1, tupleTy))
             }
@@ -144,10 +144,6 @@ class StellaTypeChecker(
     }
 
     override fun visitRecord(ctx: stellaParser.RecordContext) {
-        types.check(ctx, deep = false) { exp, act ->
-            DiagUnexpectedRecord(ctx, exp)
-        }
-
         (types.getExpectation(ctx) as? RecordTy)?.let { ty ->
             val expectedLabels = ty.labels
             val actualLabels = (ctx.bindings.mapTo(hashSetOf()) { it.name!!.text!! }) as Set<String>
@@ -181,7 +177,7 @@ class StellaTypeChecker(
 
     override fun visitDotRecord(ctx: stellaParser.DotRecordContext) {
         val label = ctx.label!!.text!!
-        (types[ctx.expr()] as? RecordTy)?.let { recTy ->
+        (types.getSynthesized(ctx.expr()) as? RecordTy)?.let { recTy ->
             if (label !in recTy.labels) {
                 diag.diag(DiagUnexpectedRecordFieldAccess(ctx, label, recTy))
             }
@@ -198,10 +194,6 @@ class StellaTypeChecker(
     }
 
     override fun visitVariant(ctx: stellaParser.VariantContext) {
-        types.check(ctx, deep = false) { exp, act ->
-            DiagUnexpectedVariant(ctx, exp)
-        }
-
         (types.getExpectation(ctx) as? VariantTy)?.let { ty ->
             val expectedTags = ty.tags
             val actualTag = ctx.label!!.text!!
@@ -214,9 +206,15 @@ class StellaTypeChecker(
             } else if (ctx.expr() != null && ty.isNullary(actualTag)) {
                 diag.diag(DiagUnexpectedValueOfNullaryVariant(ctx.expr()!!, actualTag, ty))
             }
+
+            if (ctx.expr() != null) {
+                ty.of(actualTag)?.let { tagTy ->
+                    types.expect(ctx.expr()!!, tagTy)
+                }
+            }
         }
 
-        if (types.getExpectation(ctx) == null || types.getExpectation(ctx) !is VariantTy) {
+        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) !is VariantTy) {
             diag.diag(DiagAmbiguousVariantType(ctx))
         }
 
@@ -246,11 +244,8 @@ class StellaTypeChecker(
     }
 
     override fun visitConsList(ctx: stellaParser.ConsListContext) {
-        types.check(ctx, deep = false) { exp, act ->
-            DiagUnexpectedList(ctx, exp)
-        }
-
-        val listTy = (types.getExpectation(ctx) as? ListTy) ?: ListTy(BadTy())
+        val listTy = (types.getExpectation(ctx) as? ListTy) ?: ListTy(types.getSynthesized(ctx.head!!) ?: BadTy())
+        types.expect(ctx.head!!, listTy.of)
         types.expect(ctx.tail!!, listTy)
 
         super.visitConsList(ctx)
@@ -265,25 +260,29 @@ class StellaTypeChecker(
         super.visitTail(ctx)
     }
 
+    override fun visitHead(ctx: stellaParser.HeadContext) {
+        super.visitHead(ctx)
+
+        types.getExpectation(ctx)?.let { eTy ->
+            types.expect(ctx.expr(), ListTy(eTy))
+        } ?: types.expect(ctx.expr(), ListTy(AnyTy))
+
+    }
+
     override fun visitList(ctx: stellaParser.ListContext) {
-        types.check(ctx, deep = false) { exp, act ->
-            DiagUnexpectedList(ctx, exp)
+        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) !is ListTy) {
+            diag.diag(DiagAmbiguousListType(ctx))
         }
 
         (types.getExpectation(ctx) as? ListTy)?.let { expectedList ->
             ctx.exprs.forEach { element ->
                 types.expect(element, expectedList.of)
             }
-        }
-
-        types.getExpectation(ctx)?.let { ty ->
-            if (ty !is ListTy && types[ctx] == null) {
-                diag.diag(DiagUnexpectedList(ctx, ty))
+        } ?: ctx.exprs.firstOrNull()?.let { first ->
+            val firstTy = types.getSynthesized(first) ?: return@let
+            ctx.exprs.forEach { element ->
+                types.expect(element, firstTy)
             }
-        }
-
-        if (types[ctx] == null) {
-            diag.diag(DiagAmbiguousListType(ctx))
         }
 
         super.visitList(ctx)
@@ -292,11 +291,11 @@ class StellaTypeChecker(
     override fun visitTypeAsc(ctx: stellaParser.TypeAscContext) {
         types.check(ctx)
 
-        super.visitTypeAsc(ctx)
-
-        types[ctx.expr()]?.let { ty ->
-            types.expect(ctx, ty)
+        types.getExpectation(ctx)?.let { ty ->
+            types.expect(ctx.expr(), ty)
         }
+
+        super.visitTypeAsc(ctx)
     }
 
     override fun visitInl(ctx: stellaParser.InlContext) {
@@ -310,7 +309,7 @@ class StellaTypeChecker(
             }
         }
 
-        if (types[ctx] == null) {
+        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) == null) {
             diag.diag(DiagAmbiguousSumType(ctx))
         }
 
@@ -328,7 +327,7 @@ class StellaTypeChecker(
             }
         }
 
-        if (types[ctx] == null) {
+        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) == null) {
             diag.diag(DiagAmbiguousSumType(ctx))
         }
 
@@ -336,7 +335,6 @@ class StellaTypeChecker(
     }
 
     override fun visitLet(ctx: stellaParser.LetContext) {
-
         types.getExpectation(ctx)?.let { ty ->
             types.expect(ctx.expr(), ty)
         }

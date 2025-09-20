@@ -9,6 +9,7 @@ sealed interface Ty {
     val isFunction: Boolean get() = this is FunTy
     val isTuple: Boolean get() = this is TupleTy
     val isRecord: Boolean get() = this is RecordTy
+    val isVariant: Boolean get() = this is VariantTy
     val isList: Boolean get() = this is ListTy
     val isBool: Boolean get() = this is BoolTy
 
@@ -151,7 +152,7 @@ data class VariantTy(
             val (an, at) = a
             val (bn, bt) = b
             if (an != bn) return false
-            if (at?.same(bt, deep) != true) return false
+            if (at?.same(bt, deep) != true && (at != null || at != bt)) return false
         }
         return true
     }

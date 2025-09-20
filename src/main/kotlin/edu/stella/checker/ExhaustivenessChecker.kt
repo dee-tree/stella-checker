@@ -290,7 +290,7 @@ class ExhaustivenessChecker(
 ) {
 
     fun check(): Boolean {
-        val matchingTy = types[matching.expr()]
+        val matchingTy = types.getSynthesized(matching.expr()) ?: return true
         val solver = when (val ty = matchingTy) {
             is BoolTy -> BoolExhaustivenessSolver()
             is NatTy -> NatExhaustivenessSolver()

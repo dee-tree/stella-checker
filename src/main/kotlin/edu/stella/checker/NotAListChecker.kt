@@ -9,22 +9,22 @@ class NotAListChecker(
 
     override fun visitHead(ctx: stellaParser.HeadContext) {
         super.visitHead(ctx)
-        val ty = types[ctx.expr()]
-        if (ty?.isList == true) return
+        val ty = types.getSynthesized(ctx.expr())
+        if (ty?.isList != false) return
         diag.diag(DiagNotAList(ctx.expr(), ty))
     }
 
     override fun visitTail(ctx: stellaParser.TailContext) {
         super.visitTail(ctx)
-        val ty = types[ctx.expr()]
-        if (ty?.isList == true) return
+        val ty = types.getSynthesized(ctx.expr())
+        if (ty?.isList != false) return
         diag.diag(DiagNotAList(ctx.expr(), ty))
     }
 
     override fun visitIsEmpty(ctx: stellaParser.IsEmptyContext) {
         super.visitIsEmpty(ctx)
-        val ty = types[ctx.expr()]
-        if (ty?.isList == true) return
+        val ty = types.getSynthesized(ctx.expr())
+        if (ty?.isList != false) return
         diag.diag(DiagNotAList(ctx.expr(), ty))
     }
 

@@ -10,16 +10,16 @@ class NotFunctionApplicationChecker(
     override fun visitApplication(ctx: stellaParser.ApplicationContext) {
         super.visitApplication(ctx)
 
-        val ty = types[ctx.func!!]
-        if (ty?.isFunction == true) return
+        val ty = types.getSynthesized(ctx.func!!)
+        if (ty?.isFunction != false) return
         diag.diag(DiagNotAFunction(ctx, ty))
     }
 
     override fun visitFix(ctx: stellaParser.FixContext) {
         super.visitFix(ctx)
 
-        val ty = types[ctx.expr()]
-        if (ty?.isFunction == true) return
+        val ty = types.getSynthesized(ctx.expr())
+        if (ty?.isFunction != false) return
         diag.diag(DiagNotAFunction(ctx, ty))
     }
 }
