@@ -43,7 +43,7 @@ class TestDataSource(
                     val grand = file.parentFile.parentFile
                     when (val errorName = grand.name) {
                         "bad" if TypeCheckErrorKind.values().none { it.name == file.parentFile.name } -> {
-                            System.err.println("No test `${file.parentFile.name}` found!")
+//                            System.err.println("Unsupported check `${file.parentFile.name}` found!")
                             continue
                         }
                         "bad" -> TestResult.Failed(TypeCheckErrorKind.valueOf(file.parentFile.name))

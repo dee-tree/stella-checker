@@ -6,6 +6,7 @@ import edu.stella.core.StellaCompileException
 import edu.stella.core.TypeManager
 import edu.stella.core.quote
 import edu.stella.type.BoolTy
+import edu.stella.type.ListTy
 import edu.stella.type.NatTy
 import edu.stella.type.RecordTy
 import edu.stella.type.SumTy
@@ -246,6 +247,42 @@ private class VariantExhaustivenessSolver(ty: VariantTy) : ExhaustivenessSolver<
     }
 }
 
+private class NatExhaustivenessSolver() : ExhaustivenessSolver<NatTy>(NatTy()) {
+
+    override fun plusAssign(pattern: stellaParser.PatternContext) {
+        // TODO: implement
+    }
+
+    override val isExhaustive: Boolean
+        get() = true // TODO: implement
+
+    override fun isValidPattern(pattern: stellaParser.PatternContext): Boolean = when(pattern) {
+        is stellaParser.PatternIntContext -> true
+        is stellaParser.PatternSuccContext -> true
+        is stellaParser.PatternVarContext -> true
+        is stellaParser.ParenthesisedPatternContext -> isValidPattern(pattern.pattern())
+        else -> false
+    }
+}
+
+private class ListExhaustivenessSolver(ty: ListTy) : ExhaustivenessSolver<ListTy>(ty) {
+
+    override fun plusAssign(pattern: stellaParser.PatternContext) {
+        // TODO: implement
+    }
+
+    override val isExhaustive: Boolean
+        get() = true // TODO: implement
+
+    override fun isValidPattern(pattern: stellaParser.PatternContext): Boolean = when(pattern) {
+        is stellaParser.PatternListContext -> true
+        is stellaParser.PatternConsContext -> true
+        is stellaParser.PatternVarContext -> true
+        is stellaParser.ParenthesisedPatternContext -> isValidPattern(pattern.pattern())
+        else -> false
+    }
+}
+
 class ExhaustivenessChecker(
     private val matching: stellaParser.MatchContext,
     private val types: TypeManager,
@@ -256,8 +293,10 @@ class ExhaustivenessChecker(
         val matchingTy = types[matching.expr()]
         val solver = when (val ty = matchingTy) {
             is BoolTy -> BoolExhaustivenessSolver()
+            is NatTy -> NatExhaustivenessSolver()
             is SumTy -> SumExhaustivenessSolver(ty)
             is VariantTy -> VariantExhaustivenessSolver(ty)
+            is ListTy -> ListExhaustivenessSolver(ty)
             else -> throw StellaCompileException("Unexpected matching over type ${ty.toString().quote()}")
         }
 

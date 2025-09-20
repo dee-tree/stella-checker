@@ -23,6 +23,11 @@ data class BadTy(val expr: stellaParser.ExprContext? = null) : Ty {
     override fun same(other: Ty?, deep: Boolean): Boolean = other is BadTy
 }
 
+data object AnyTy : Ty {
+    override fun same(other: Ty?, deep: Boolean): Boolean = other !is BadTy
+    override fun toString(): String = "*"
+}
+
 data class BoolTy(override val astType: stellaParser.TypeBoolContext? = null) : Ty {
     override fun toString(): String = "Bool"
 
@@ -127,11 +132,14 @@ data class RecordTy(
 }
 
 data class VariantTy(
-    val components: List<Pair<String, Ty>>,
+    val components: List<Pair<String, Ty?>>,
     override val astType: stellaParser.TypeVariantContext? = null
 ) : Ty {
     override fun toString(): String = components.joinToString(", ", prefix = "<", postfix = ">") { component ->
-        "${component.first}: ${component.second}"
+        when (component.second) {
+            null -> component.first
+            else -> "${component.first}: ${component.second}"
+        }
     }
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
@@ -143,13 +151,17 @@ data class VariantTy(
             val (an, at) = a
             val (bn, bt) = b
             if (an != bn) return false
-            if (!at.same(bt, deep)) return false
+            if (at?.same(bt, deep) != true) return false
         }
         return true
     }
 
     val tags: List<String>
         get() = components.map { it.first }
+
+    fun of(tag: String): Ty? = components.firstOrNull { it.first == tag }?.second
+
+    fun isNullary(tag: String) = of(tag) == null
 }
 
 data class ListTy(

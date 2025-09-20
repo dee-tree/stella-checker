@@ -19,6 +19,11 @@ class SymbolCollector() : stellaParserBaseVisitor<SymbolTable>() {
         return super.visitDeclFun(ctx).also { table.pop() }
     }
 
+    override fun visitAbstraction(ctx: stellaParser.AbstractionContext): SymbolTable {
+        table.push(ctx)
+        return super.visitAbstraction(ctx).also { table.pop() }
+    }
+
     override fun visitDeclFunGeneric(ctx: stellaParser.DeclFunGenericContext): SymbolTable {
         table.add(ctx)
         table.push(ctx)

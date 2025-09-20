@@ -65,7 +65,7 @@ private class SymbolScope private constructor(
 
     private fun add(symbol: String, decl: ParserRuleContext) {
         if (symbol in symbols)
-            throw StellaCompileException("Symbol ${symbol.quote()} already presents in symbol table")
+            throw StellaCompileException("Symbol ${symbol.quote()} already presents in current scope")
 
         symbols[symbol] = decl
     }

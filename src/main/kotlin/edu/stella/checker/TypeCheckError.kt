@@ -175,6 +175,25 @@ class DiagUnexpectedVariantLabel(
     { "Unexpected label ${unexpected.quote()} in variant ${getText(variant).quote()} of expected type ${expectedTy.toString().quote()}" }
 )
 
+class DiagMissingVariantData(
+    variant: stellaParser.VariantContext,
+    missingFieldValue: String,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_MISSING_DATA_FOR_LABEL,
+    variant.getParent() ?: variant,
+    { "Missing value for tag ${missingFieldValue.quote()} in variant ${getText(variant).quote()}" }
+)
+
+class DiagUnexpectedValueOfNullaryVariant(
+    expr: stellaParser.ExprContext,
+    tag: String,
+    ty: Ty?,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_DATA_FOR_NULLARY_LABEL,
+    expr.getParent() ?: expr,
+    { "Unexpected value ${getText(expr).quote()} for nullary tag ${tag.quote()} in variant type ${ty.toString().quote()}" }
+)
+
 class DiagTupleIndexOutOfBounds(
     access: stellaParser.DotTupleContext,
     index: Int,

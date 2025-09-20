@@ -37,6 +37,10 @@ class MapAst<V> : Map<ParseTree, V> {
         converter[key.sourceInterval] = key
     }
 
+    fun getOrPut(key: ParseTree, defaultValue: V): V {
+        return this[key] ?: run { this[key] = defaultValue; defaultValue }
+    }
+
     fun remove(key: ParseTree): V? = map.remove(key.sourceInterval).also {
         converter.remove(key.sourceInterval)
     }

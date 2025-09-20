@@ -3,7 +3,7 @@ package edu.stella.checker
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.core.DiagnosticsEngine
 import edu.stella.core.TypeManager
-import edu.stella.core.quote
+import edu.stella.type.AnyTy
 import edu.stella.type.BadTy
 import edu.stella.type.BoolTy
 import edu.stella.type.FunTy
@@ -76,14 +76,14 @@ class StellaTypeChecker(
     }
 
     override fun visitAbstraction(ctx: stellaParser.AbstractionContext) {
-        types.check(ctx, deep = false) {
-            DiagUnexpectedLambda(ctx, types.getExpectation(ctx))
+        types.check(ctx, deep = false) { exp, act ->
+            DiagUnexpectedLambda(ctx, exp)
         }
 
         (types.getExpectation(ctx) as? FunTy)?.let { expected ->
             expected.params.zip(ctx.paramDecls).forEach { (expTy, param) ->
                 types.expect(param, expTy)
-                types.check(param) { DiagUnexpectedParameterType(param, expTy) }
+                types.check(param) { _, _ -> DiagUnexpectedParameterType(param, expTy) }
             }
 
             types.expect(ctx.returnExpr!!, expected.ret)
@@ -118,8 +118,8 @@ class StellaTypeChecker(
     }
 
     override fun visitTuple(ctx: stellaParser.TupleContext) {
-        types.check(ctx, deep = false) {
-            DiagUnexpectedTuple(ctx, types.getExpectation(ctx) ?: BadTy())
+        types.check(ctx, deep = false) { exp, act ->
+            DiagUnexpectedTuple(ctx, exp)
         }
 
         (types.getExpectation(ctx) as? TupleTy)?.let { tupleTy ->
@@ -144,8 +144,8 @@ class StellaTypeChecker(
     }
 
     override fun visitRecord(ctx: stellaParser.RecordContext) {
-        types.check(ctx, deep = false) {
-            DiagUnexpectedRecord(ctx, types.getExpectation(ctx) ?: BadTy())
+        types.check(ctx, deep = false) { exp, act ->
+            DiagUnexpectedRecord(ctx, exp)
         }
 
         (types.getExpectation(ctx) as? RecordTy)?.let { ty ->
@@ -198,8 +198,8 @@ class StellaTypeChecker(
     }
 
     override fun visitVariant(ctx: stellaParser.VariantContext) {
-        types.check(ctx, deep = false) {
-            DiagUnexpectedVariant(ctx, types.getExpectation(ctx) ?: BadTy())
+        types.check(ctx, deep = false) { exp, act ->
+            DiagUnexpectedVariant(ctx, exp)
         }
 
         (types.getExpectation(ctx) as? VariantTy)?.let { ty ->
@@ -207,6 +207,12 @@ class StellaTypeChecker(
             val actualTag = ctx.label!!.text!!
             if (actualTag !in expectedTags) {
                 diag.diag(DiagUnexpectedVariantLabel(ctx, actualTag, ty))
+            }
+
+            if (ctx.expr() == null && !ty.isNullary(actualTag)) {
+                diag.diag(DiagMissingVariantData(ctx, actualTag))
+            } else if (ctx.expr() != null && ty.isNullary(actualTag)) {
+                diag.diag(DiagUnexpectedValueOfNullaryVariant(ctx.expr()!!, actualTag, ty))
             }
         }
 
@@ -236,13 +242,12 @@ class StellaTypeChecker(
 
     override fun visitIsZero(ctx: stellaParser.IsZeroContext) {
         types.expect(ctx.expr(), NatTy())
-        types.expect(ctx, BoolTy())
         super.visitIsZero(ctx)
     }
 
     override fun visitConsList(ctx: stellaParser.ConsListContext) {
-        types.check(ctx, deep = false) {
-            DiagUnexpectedList(ctx, types.getExpectation(ctx) ?: BadTy())
+        types.check(ctx, deep = false) { exp, act ->
+            DiagUnexpectedList(ctx, exp)
         }
 
         val listTy = (types.getExpectation(ctx) as? ListTy) ?: ListTy(BadTy())
@@ -251,9 +256,18 @@ class StellaTypeChecker(
         super.visitConsList(ctx)
     }
 
+    override fun visitTail(ctx: stellaParser.TailContext) {
+        types.check(ctx, deep = false)
+
+        val listTy = (types.getExpectation(ctx) as? ListTy) ?: ListTy(AnyTy)
+        types.expect(ctx.expr(), listTy)
+
+        super.visitTail(ctx)
+    }
+
     override fun visitList(ctx: stellaParser.ListContext) {
-        types.check(ctx, deep = false) {
-            DiagUnexpectedList(ctx, types.getExpectation(ctx) ?: BadTy())
+        types.check(ctx, deep = false) { exp, act ->
+            DiagUnexpectedList(ctx, exp)
         }
 
         (types.getExpectation(ctx) as? ListTy)?.let { expectedList ->
@@ -273,6 +287,16 @@ class StellaTypeChecker(
         }
 
         super.visitList(ctx)
+    }
+
+    override fun visitTypeAsc(ctx: stellaParser.TypeAscContext) {
+        types.check(ctx)
+
+        super.visitTypeAsc(ctx)
+
+        types[ctx.expr()]?.let { ty ->
+            types.expect(ctx, ty)
+        }
     }
 
     override fun visitInl(ctx: stellaParser.InlContext) {
@@ -311,8 +335,21 @@ class StellaTypeChecker(
         super.visitInr(ctx)
     }
 
+    override fun visitLet(ctx: stellaParser.LetContext) {
+
+        types.getExpectation(ctx)?.let { ty ->
+            types.expect(ctx.expr(), ty)
+        }
+
+        super.visitLet(ctx)
+    }
+
     override fun visitSequence(ctx: stellaParser.SequenceContext) {
+        types.check(ctx)
         types.expect(ctx.expr1!!, UnitTy())
+        types.getExpectation(ctx)?.let { ty ->
+            types.expect(ctx.expr2!!, ty)
+        }
         super.visitSequence(ctx)
     }
 
