@@ -59,6 +59,10 @@ kotlin {
             }
         }
     }
+
+    compilerOptions {
+        freeCompilerArgs.add("-Xwhen-guards")
+    }
 }
 
 private val mainFQName = "edu.stella.MainKt"

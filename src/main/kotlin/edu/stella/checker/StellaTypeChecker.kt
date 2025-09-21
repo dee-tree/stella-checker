@@ -1,6 +1,7 @@
 package edu.stella.checker
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
+import edu.stella.checker.exhaustiveness.ExhaustivenessChecker
 import edu.stella.core.DiagnosticsEngine
 import edu.stella.core.TypeManager
 import edu.stella.type.AnyTy
