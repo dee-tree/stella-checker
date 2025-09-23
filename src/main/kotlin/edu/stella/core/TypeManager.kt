@@ -51,6 +51,8 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
 
         if (node is stellaParser.ParenthesisedExprContext) expectation[node.expr()] = ty
         if (node is stellaParser.TerminatingSemicolonContext) expectation[node.expr()] = ty
+
+        check(node)
     }
 
     fun check(node: ParseTree, deep: Boolean = true) {
@@ -77,7 +79,7 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
 
     fun checkRemaining() {
         for ((node, _) in expectation) {
-            check(node)
+//            check(node)
         }
     }
 

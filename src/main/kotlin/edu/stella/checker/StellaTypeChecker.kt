@@ -38,7 +38,6 @@ class StellaTypeChecker(
     override fun visitProgram(ctx: stellaParser.ProgramContext) {
         ctx.accept(MissingMainChecker(diag))
         ctx.accept(UndefinedVariableChecker(this))
-        ctx.accept(NotFunctionApplicationChecker(this))
         ctx.accept(NotATupleChecker(this))
         ctx.accept(NotARecordChecker(this))
         ctx.accept(NotAListChecker(this))
@@ -56,7 +55,12 @@ class StellaTypeChecker(
         types.getExpectation(ctx)?.let { retTy ->
             types.expect(ctx.thenExpr!!, retTy)
             types.expect(ctx.elseExpr!!, retTy)
+        } ?: run {
+            types[ctx.thenExpr!!]?.let { ty ->
+                types.expect(ctx.elseExpr!!, ty)
+            }
         }
+
         super.visitIf(ctx)
     }
 
@@ -89,6 +93,10 @@ class StellaTypeChecker(
     }
 
     override fun visitFix(ctx: stellaParser.FixContext) {
+        types.getSynthesized(ctx.expr())?.let { ty ->
+            if (!ty.isFunction) diag.diag(DiagNotAFunction(ctx, ty))
+        }
+
         types.getExpectation(ctx)?.let { ty ->
             types.expect(ctx.expr(), FunTy(ty, listOf(ty)))
         } ?: types.getSynthesized(ctx)?.let { ty ->
@@ -101,12 +109,16 @@ class StellaTypeChecker(
         types.expect(ctx.n!!, NatTy())
         types.check(ctx.n!!)
         val element = types.getSynthesized(ctx.initial!!) ?: BadTy()
-        types.expect(ctx.step!!, FunTy(FunTy(element, listOf(element)), listOf(NatTy())))
+        types.expect(ctx.step!!, FunTy(element, listOf(NatTy())))
 
         super.visitNatRec(ctx)
     }
 
     override fun visitApplication(ctx: stellaParser.ApplicationContext) {
+        types.getSynthesized(ctx.func!!)?.let { ty ->
+            if (!ty.isFunction) diag.diag(DiagNotAFunction(ctx, ty))
+        }
+
         val paramTys = mutableListOf<Ty>()
         (types.getSynthesized(ctx.func!!) as? FunTy)?.let { funTy ->
             ctx.args.zip(funTy.params).forEach { (arg, ty) ->
@@ -127,21 +139,28 @@ class StellaTypeChecker(
             if (ctx.exprs.size != tupleTy.components.size) {
                 diag.diag(DiagUnexpectedTupleLength(ctx, tupleTy))
             }
+
+            tupleTy.components.forEachIndexed { i, ty ->
+                types.expect(ctx.exprs[i], ty)
+            }
         }
 
         super.visitTuple(ctx)
     }
 
     override fun visitDotTuple(ctx: stellaParser.DotTupleContext) {
+        super.visitDotTuple(ctx)
+
         val idx = ctx.index!!.text!!.toInt() - 1
 
         (types.getSynthesized(ctx.expr()) as? TupleTy)?.let { tupleTy ->
             if (idx !in tupleTy.components.indices) {
                 diag.diag(DiagTupleIndexOutOfBounds(ctx, idx + 1, tupleTy))
             }
+            if (tupleTy.components.size > idx) {
+                types.expect(ctx, tupleTy.components[idx])
+            }
         }
-
-        super.visitDotTuple(ctx)
     }
 
     override fun visitRecord(ctx: stellaParser.RecordContext) {
@@ -290,6 +309,7 @@ class StellaTypeChecker(
     }
 
     override fun visitTypeAsc(ctx: stellaParser.TypeAscContext) {
+        types.expect(ctx.expr(), ctx.stellatype().asTy)
         types.check(ctx)
 
         types.getExpectation(ctx)?.let { ty ->
@@ -310,7 +330,7 @@ class StellaTypeChecker(
             }
         }
 
-        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) == null) {
+        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) !is SumTy) {
             diag.diag(DiagAmbiguousSumType(ctx))
         }
 
@@ -328,7 +348,7 @@ class StellaTypeChecker(
             }
         }
 
-        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) == null) {
+        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) !is SumTy) {
             diag.diag(DiagAmbiguousSumType(ctx))
         }
 

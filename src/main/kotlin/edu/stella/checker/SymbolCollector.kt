@@ -52,8 +52,16 @@ class SymbolCollector() : stellaParserBaseVisitor<SymbolTable>() {
 //    }
 
     override fun visitLet(ctx: stellaParser.LetContext): SymbolTable {
-        table.push(ctx)
-//        table.add(ctx) // It's done in this collector
-        return super.visitLet(ctx).also { table.pop() }
+        // manual walk instead of super call
+        ctx.patternBindings.forEach {
+            it.expr().accept(this)
+        }
+
+        table.push(ctx.expr())
+        ctx.patternBindings.forEach {
+            it.pattern().accept(this)
+        }
+
+        return ctx.expr().accept(this).also { table.pop() }
     }
 }

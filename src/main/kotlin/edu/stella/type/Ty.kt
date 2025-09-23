@@ -93,7 +93,7 @@ data class TupleTy(
     }
 
     fun getComponentTyOrNull(i: Int): Ty? = when {
-        i < 1 -> null
+        i < 0 -> null
         i > components.lastIndex -> null
         else -> components[i]
     }

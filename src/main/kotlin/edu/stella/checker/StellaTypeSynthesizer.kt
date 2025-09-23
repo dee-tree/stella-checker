@@ -57,7 +57,9 @@ class StellaTypeSynthesizer(
 
     override fun visitVar(ctx: stellaParser.VarContext) {
         super.visitVar(ctx)
-        types.learn(ctx, getTy(ctx.name!!.text!!, ctx) ?: BadTy(ctx))
+        getTy(ctx.name!!.text!!, ctx)?.let { ty ->
+            types.learn(ctx, ty)
+        }
     }
 
     override fun visitConstFalse(ctx: stellaParser.ConstFalseContext) {
@@ -200,7 +202,7 @@ class StellaTypeSynthesizer(
         super.visitDotTuple(ctx)
 
         (types.getSynthesized(ctx.expr()) as? TupleTy)?.let { tuTy ->
-            tuTy.getComponentTyOrNull(ctx.index!!.text!!.toInt())?.let { componentTy ->
+            tuTy.getComponentTyOrNull(ctx.index!!.text!!.toInt() - 1)?.let { componentTy ->
                 types.learn(ctx, componentTy)
             }
         }
@@ -264,12 +266,11 @@ class StellaTypeSynthesizer(
     override fun visitIf(ctx: stellaParser.IfContext) {
         super.visitIf(ctx)
 
-        val ty = types.getSynthesized(ctx.thenExpr!!).let {
-            val ty = if (it is BadTy) types.getSynthesized(ctx.elseExpr!!) else it
-            ty ?: return
-        }
+        val thenTy = types.getSynthesized(ctx.thenExpr!!) ?: return
+        val elseTy = types.getSynthesized(ctx.elseExpr!!) ?: return
 
-        types.learn(ctx, ty)
+        if (!(thenTy same elseTy)) return
+        types.learn(ctx, thenTy)
     }
 
     override fun visitConsList(ctx: stellaParser.ConsListContext) {
@@ -308,14 +309,6 @@ class StellaTypeSynthesizer(
 
         (types.getSynthesized(ctx.expr()) as? FunTy)?.let { funTy ->
             types.learn(ctx, funTy.ret)
-        }
-    }
-
-    override fun visitNatRec(ctx: stellaParser.NatRecContext) {
-        super.visitNatRec(ctx)
-
-        types.getSynthesized(ctx.initial!!)?.let { ty ->
-            types.learn(ctx, ty)
         }
     }
 }
