@@ -17,8 +17,9 @@ internal class VariantExhaustivenessSolver(ty: VariantTy) : ExhaustivenessSolver
         }
 
     override fun isValidPattern(pattern: stellaParser.PatternContext): Boolean = when(pattern) {
-        is stellaParser.PatternVariantContext -> true
+        is stellaParser.PatternVariantContext -> pattern.label!!.text!! in of.tags
         is stellaParser.PatternVarContext -> true
+        is stellaParser.PatternAscContext -> true
         is stellaParser.ParenthesisedPatternContext -> isValidPattern(pattern.pattern())
         else -> false
     }

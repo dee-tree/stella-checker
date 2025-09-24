@@ -11,7 +11,7 @@ class NotARecordChecker(
         super.visitDotRecord(ctx)
 
         val ty = types.getSynthesized(ctx.expr())
-        if (ty?.isRecord == true) return
+        if (ty?.isRecord != false) return
 
         diag.diag(DiagNotARecord(ctx.expr(), ty))
     }

@@ -11,6 +11,7 @@ import edu.stella.type.BoolTy
 import edu.stella.type.ListTy
 import edu.stella.type.NatTy
 import edu.stella.type.SumTy
+import edu.stella.type.TupleTy
 import edu.stella.type.VariantTy
 
 class ExhaustivenessChecker(
@@ -27,6 +28,7 @@ class ExhaustivenessChecker(
             is SumTy -> SumExhaustivenessSolver(ty)
             is VariantTy -> VariantExhaustivenessSolver(ty)
             is ListTy -> ListExhaustivenessSolver(ty)
+            is TupleTy -> TupleExhaustivenessSolver(ty)
             else -> throw StellaCompileException("Unexpected matching over type ${ty.toString().quote()}")
         }
 

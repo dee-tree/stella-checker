@@ -223,8 +223,9 @@ class StellaTypeSynthesizer(
 
         val tys = mutableListOf<Pair<String, Ty>>()
         ctx.bindings.forEach { binding ->
-            val ty = types.getSynthesized(binding.expr())!!
-            tys += binding.name!!.text!! to ty
+            types.getSynthesized(binding.expr())?.let { ty ->
+                tys += binding.name!!.text!! to ty
+            } ?: return
         }
 
         types.learn(ctx, RecordTy(tys))

@@ -87,6 +87,8 @@ class StellaTypeChecker(
             }
 
             types.expect(ctx.returnExpr!!, expected.ret)
+        } ?: types.getExpectation(ctx)?.let {
+            diag.diag(DiagUnexpectedLambda(ctx, it))
         }
 
         super.visitAbstraction(ctx)
@@ -109,7 +111,7 @@ class StellaTypeChecker(
         types.expect(ctx.n!!, NatTy())
         types.check(ctx.n!!)
         val element = types.getSynthesized(ctx.initial!!) ?: BadTy()
-        types.expect(ctx.step!!, FunTy(element, listOf(NatTy())))
+        types.expect(ctx.step!!, FunTy(FunTy(element, listOf(element)), listOf(NatTy())))
 
         super.visitNatRec(ctx)
     }
