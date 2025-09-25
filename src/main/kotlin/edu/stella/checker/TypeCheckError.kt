@@ -270,7 +270,7 @@ class DiagUnexpectedPatternForType(
 ) : TypeCheckError(
     TypeCheckErrorKind.ERROR_UNEXPECTED_PATTERN_FOR_TYPE,
     pattern.getParent() ?: pattern,
-    { "Unexpected pattern ${getText(pattern).quote()} for type ${ofType.toString().quote()} }" }
+    { "Unexpected pattern ${getText(pattern).quote()} for type ${ofType.toString().quote()}" }
 )
 
 class DiagDuplicatingRecordField(
@@ -302,11 +302,35 @@ class DiagDuplicatingVariantTypeField(
 )
 
 class DiagExceptionTypeNotDeclared(
-    throwExpr: stellaParser.ThrowContext,
+    expr: stellaParser.ExprContext,
 ) : TypeCheckError(
     TypeCheckErrorKind.ERROR_EXCEPTION_TYPE_NOT_DECLARED,
+    expr.getParent() ?: expr,
+    { "Exception in ${getText(expr).quote()} without its type declaration" }
+)
+
+class DiagAmbiguousThrowType(
+    throwExpr: stellaParser.ThrowContext,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_AMBIGUOUS_THROW_TYPE,
     throwExpr.getParent() ?: throwExpr,
-    { "Cannot throw exception ${getText(throwExpr).quote()} because exception type is not declared" }
+    { "Ambiguous throw type in expression ${getText(throwExpr).quote()}. Please, specify expected type explicitly" }
+)
+
+class DiagAmbiguousPanicType(
+    panic: stellaParser.PanicContext,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_AMBIGUOUS_PANIC_TYPE,
+    panic.getParent() ?: panic,
+    { "Ambiguous panic type in expression ${getText(panic).quote()}. Please, specify expected type explicitly" }
+)
+
+class DiagAmbiguousReferenceType(
+    ref: stellaParser.ExprContext,
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_AMBIGUOUS_REFERENCE_TYPE,
+    ref.getParent() ?: ref,
+    { "Ambiguous reference type in expression ${getText(ref).quote()}. Please, specify expected type explicitly" }
 )
 
 class DiagError(

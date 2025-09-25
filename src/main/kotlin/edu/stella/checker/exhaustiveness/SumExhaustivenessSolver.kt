@@ -3,6 +3,7 @@ package edu.stella.checker.exhaustiveness
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.core.StellaCompileException
 import edu.stella.type.SumTy
+import edu.stella.type.asTy
 
 internal class SumExhaustivenessSolver(ty: SumTy): ExhaustivenessSolver<SumTy>(ty) {
     override val isExhaustive: Boolean
@@ -25,6 +26,7 @@ internal class SumExhaustivenessSolver(ty: SumTy): ExhaustivenessSolver<SumTy>(t
         is stellaParser.PatternInlContext -> true
         is stellaParser.PatternInrContext -> true
         is stellaParser.PatternVarContext -> true
+        is stellaParser.PatternAscContext -> of same pattern.stellatype().asTy && isValidPattern(pattern.pattern())
         is stellaParser.ParenthesisedPatternContext -> isValidPattern(pattern.pattern())
         else -> false
     }
@@ -33,6 +35,7 @@ internal class SumExhaustivenessSolver(ty: SumTy): ExhaustivenessSolver<SumTy>(t
         is stellaParser.PatternInlContext -> this += SumModel(SumModel.SumSide.LEFT, of)
         is stellaParser.PatternInrContext -> this += SumModel(SumModel.SumSide.RIGHT, of)
         is stellaParser.PatternVarContext -> this += WildcardModel<SumTy>(of)
+        is stellaParser.PatternAscContext -> this += pattern.pattern()
         is stellaParser.ParenthesisedPatternContext -> this += pattern.pattern()
         else -> throw StellaCompileException("Unexpected pattern $pattern for sum matcher")
     }

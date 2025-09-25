@@ -2,6 +2,7 @@ package edu.stella.checker.exhaustiveness
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.type.ListTy
+import edu.stella.type.asTy
 
 internal class ListExhaustivenessSolver(ty: ListTy) : ExhaustivenessSolver<ListTy>(ty) {
 
@@ -16,6 +17,7 @@ internal class ListExhaustivenessSolver(ty: ListTy) : ExhaustivenessSolver<ListT
         is stellaParser.PatternListContext -> true
         is stellaParser.PatternConsContext -> true
         is stellaParser.PatternVarContext -> true
+        is stellaParser.PatternAscContext -> of same pattern.stellatype().asTy && isValidPattern(pattern.pattern())
         is stellaParser.ParenthesisedPatternContext -> isValidPattern(pattern.pattern())
         else -> false
     }

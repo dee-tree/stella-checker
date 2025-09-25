@@ -32,13 +32,13 @@ data object AnyTy : Ty {
 data class BoolTy(override val astType: stellaParser.TypeBoolContext? = null) : Ty {
     override fun toString(): String = "Bool"
 
-    override fun same(other: Ty?, deep: Boolean): Boolean = other is BoolTy || other is ErrorTy
+    override fun same(other: Ty?, deep: Boolean): Boolean = other is BoolTy// || other is ErrorTy
 }
 
 data class NatTy(override val astType: stellaParser.TypeNatContext? = null) : Ty {
     override fun toString(): String = "Nat"
 
-    override fun same(other: Ty?, deep: Boolean): Boolean = other is NatTy || other is ErrorTy
+    override fun same(other: Ty?, deep: Boolean): Boolean = other is NatTy// || other is ErrorTy
 }
 
 data class FunTy(
@@ -49,7 +49,7 @@ data class FunTy(
     override fun toString(): String = params.joinToString(", ", prefix = "(", postfix = ")") + " -> " + ret
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
-        if (other is ErrorTy) return true
+//        if (other is ErrorTy) return true
         if (other !is FunTy) return false
         if (!deep) return true
 
@@ -82,7 +82,7 @@ data class TupleTy(
     override fun toString(): String = components.joinToString(", ", prefix = "(", postfix = ")")
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
-        if (other is ErrorTy) return true
+//        if (other is ErrorTy) return true
         if (other !is TupleTy) return false
         if (!deep) return true
         if (components.size != other.components.size) return false
@@ -108,7 +108,7 @@ data class RecordTy(
     }
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
-        if (other is ErrorTy) return true
+//        if (other is ErrorTy) return true
         if (other !is RecordTy) return false
         if (!deep) return true
         if (components.size != other.components.size) return false
@@ -144,7 +144,7 @@ data class VariantTy(
     }
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
-        if (other is ErrorTy) return true
+//        if (other is ErrorTy) return true
         if (other !is VariantTy) return false
         if (!deep) return true
         if (components.size != other.components.size) return false
@@ -172,7 +172,7 @@ data class ListTy(
     override fun toString(): String = "[$of]"
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
-        if (other is ErrorTy) return true
+//        if (other is ErrorTy) return true
         if (other !is ListTy) return false
         if (!deep) return true
         return of.same(other.of, deep)
@@ -185,7 +185,7 @@ data class UnitTy(
     override fun toString(): String = "Unit"
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
-        if (other is ErrorTy) return true
+//        if (other is ErrorTy) return true
         return other is UnitTy
     }
 }
@@ -198,7 +198,7 @@ data class SumTy(
     override fun toString(): String = "$left + $right"
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
-        if (other is ErrorTy) return true
+//        if (other is ErrorTy) return true
         if (other !is SumTy) return false
         if (!deep) return true
         if (!(left same other.left)) return false
@@ -207,11 +207,21 @@ data class SumTy(
     }
 }
 
-data class ErrorTy(override val astType: stellaParser.TypeBoolContext? = null) : Ty {
-    override fun toString(): String = "Error"
+data class RefTy(val of: Ty) : Ty {
+    override fun toString(): String = "&$of"
 
     override fun same(other: Ty?, deep: Boolean): Boolean {
-        if (other is BadTy) return false
-        return true
+        if (other !is RefTy) return false
+        if (!deep) return true
+        return of same other.of
     }
 }
+
+//data class ErrorTy(override val astType: stellaParser.TypeBoolContext? = null) : Ty {
+//    override fun toString(): String = "Error"
+//
+//    override fun same(other: Ty?, deep: Boolean): Boolean {
+//        if (other is BadTy) return false
+//        return true
+//    }
+//}

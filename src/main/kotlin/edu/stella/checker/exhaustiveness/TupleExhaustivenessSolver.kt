@@ -2,6 +2,7 @@ package edu.stella.checker.exhaustiveness
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.type.TupleTy
+import edu.stella.type.asTy
 
 internal class TupleExhaustivenessSolver(ty: TupleTy) : ExhaustivenessSolver<TupleTy>(ty) {
     override val isExhaustive: Boolean
@@ -12,7 +13,7 @@ internal class TupleExhaustivenessSolver(ty: TupleTy) : ExhaustivenessSolver<Tup
     override fun isValidPattern(pattern: stellaParser.PatternContext): Boolean = when(pattern) {
         is stellaParser.PatternTupleContext -> true
         is stellaParser.PatternVarContext -> true
-        is stellaParser.PatternAscContext -> true
+        is stellaParser.PatternAscContext -> of same pattern.stellatype().asTy && isValidPattern(pattern.pattern())
         is stellaParser.ParenthesisedPatternContext -> isValidPattern(pattern.pattern())
         else -> false
     }

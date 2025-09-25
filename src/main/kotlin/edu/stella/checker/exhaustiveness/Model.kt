@@ -1,7 +1,7 @@
 package edu.stella.checker.exhaustiveness
 
+import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.type.Ty
-import edu.stella.type.UnitTy
 
 internal sealed class Model<T : Ty>(val of: T) : Iterable<Model<T>>, Iterator<Model<T>> {
     open val next: Model<T>? = null
@@ -9,8 +9,6 @@ internal sealed class Model<T : Ty>(val of: T) : Iterable<Model<T>>, Iterator<Mo
     override fun hasNext(): Boolean = next != null
     override fun next(): Model<T> = next!!
     override fun iterator(): Iterator<Model<T>> = this
-
-    open fun normalized(): Model<T> = this
 }
 
 internal sealed class FiniteModel<T : Ty>(of: T) : Model<T>(of)
@@ -19,21 +17,22 @@ internal class WildcardModel<T : Ty>(of: T) : Model<T>(of) {
 //    override fun isValidPattern(pattern: stellaParser.PatternContext): Boolean = true
 }
 
-private object UnitModel : Model<UnitTy>(UnitTy()) {
-    override fun equals(other: Any?): Boolean {
-        if (other == null) return false
-        return other is UnitModel
+internal class WildcardExhaustivenessSolver<T : Ty>(of: T) : ExhaustivenessSolver<T>(of) {
+    override fun plusAssign(pattern: stellaParser.PatternContext) {
+        this += WildcardModel<T>(of)
     }
 
-//    override fun isValidPattern(pattern: stellaParser.PatternContext): Boolean = when (pattern) {
-//        is stellaParser.PatternUnitContext -> true
-//        is stellaParser.PatternVarContext -> true
-//        is stellaParser.ParenthesisedPatternContext -> isValidPattern(pattern.pattern())
-//        else -> false
-//    }
+    override val isExhaustive: Boolean
+        get() = models.isNotEmpty()
 
-    override fun hashCode(): Int = this::class.simpleName.hashCode()
+    override fun isValidPattern(pattern: stellaParser.PatternContext): Boolean = when (pattern) {
+        is stellaParser.PatternVarContext -> true
+        is stellaParser.PatternAscContext -> isValidPattern(pattern.pattern())
+        is stellaParser.ParenthesisedPatternContext -> isValidPattern(pattern.pattern())
+        else -> false
+    }
 }
+
 
 
 

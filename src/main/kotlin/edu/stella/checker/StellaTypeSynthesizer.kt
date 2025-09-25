@@ -2,9 +2,7 @@ package edu.stella.checker
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.type.AnyTy
-import edu.stella.type.BadTy
 import edu.stella.type.BoolTy
-import edu.stella.type.ErrorTy
 import edu.stella.type.FunTy
 import edu.stella.type.ListTy
 import edu.stella.type.NatTy
@@ -302,7 +300,16 @@ class StellaTypeSynthesizer(
 
     override fun visitPanic(ctx: stellaParser.PanicContext) {
         super.visitPanic(ctx)
-        types.learn(ctx, ErrorTy())
+    }
+
+    override fun visitTryCatch(ctx: stellaParser.TryCatchContext) {
+        super.visitTryCatch(ctx)
+
+        val tryTy = types.getSynthesized(ctx.tryExpr!!) ?: return
+        val fallbackTy = types.getSynthesized(ctx.fallbackExpr!!) ?: return
+
+        if (!(tryTy same fallbackTy)) return
+        types.learn(ctx, tryTy)
     }
 
     override fun visitFix(ctx: stellaParser.FixContext) {

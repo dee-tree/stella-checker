@@ -2,6 +2,7 @@ package edu.stella.checker
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.checker.exhaustiveness.ExhaustivenessChecker
+import edu.stella.checker.exhaustiveness.patternChecker
 import edu.stella.core.DiagnosticsEngine
 import edu.stella.core.TypeManager
 import edu.stella.type.AnyTy
@@ -400,6 +401,10 @@ class StellaTypeChecker(
         if (!extensions.isPanicEnabled) {
             diag.diag(DiagError.extensionMustBeEnabled(ctx, ExtensionChecker.Extensions.PANIC))
         }
+
+        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) == null) {
+            diag.diag(DiagAmbiguousPanicType((ctx)))
+        }
     }
 
     override fun visitThrow(ctx: stellaParser.ThrowContext) {
@@ -407,6 +412,39 @@ class StellaTypeChecker(
 
         if (exceptionType == null) {
             diag.diag(DiagExceptionTypeNotDeclared(ctx))
+            return
+        }
+
+        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) == null) {
+            diag.diag(DiagAmbiguousThrowType((ctx)))
+        }
+
+        types.expect(ctx.expr(), exceptionType!!)
+    }
+
+    override fun visitTryCatch(ctx: stellaParser.TryCatchContext) {
+        super.visitTryCatch(ctx)
+
+        if (exceptionType == null) {
+            diag.diag(DiagExceptionTypeNotDeclared(ctx))
+            return
+        }
+
+        val ty = types.getExpectation(ctx) ?: types[ctx.tryExpr!!] ?: return
+
+        types.expect(ctx.tryExpr!!, ty)
+        types.expect(ctx.fallbackExpr!!, ty)
+
+        if (!exceptionType!!.patternChecker().isValidPattern(ctx.pattern())) {
+            diag.diag(DiagUnexpectedPatternForType(ctx.pattern(), ty))
+        }
+    }
+
+    override fun visitConstMemory(ctx: stellaParser.ConstMemoryContext) {
+        super.visitConstMemory(ctx)
+
+        if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) == null) {
+            diag.diag(DiagAmbiguousReferenceType((ctx)))
         }
     }
 }

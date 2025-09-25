@@ -3,6 +3,7 @@ package edu.stella.checker.exhaustiveness
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.core.StellaCompileException
 import edu.stella.type.NatTy
+import edu.stella.type.asTy
 
 internal class NatExhaustivenessSolver() : ExhaustivenessSolver<NatTy>(NatTy()) {
 
@@ -28,7 +29,7 @@ internal class NatExhaustivenessSolver() : ExhaustivenessSolver<NatTy>(NatTy()) 
         is stellaParser.PatternIntContext -> true
         is stellaParser.PatternSuccContext -> true
         is stellaParser.PatternVarContext -> true
-        is stellaParser.PatternAscContext -> true
+        is stellaParser.PatternAscContext -> of same pattern.stellatype().asTy && isValidPattern(pattern.pattern())
         is stellaParser.ParenthesisedPatternContext -> isValidPattern(pattern.pattern())
         else -> false
     }
