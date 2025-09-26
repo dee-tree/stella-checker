@@ -440,6 +440,20 @@ class StellaTypeChecker(
         }
     }
 
+    override fun visitTryWith(ctx: stellaParser.TryWithContext) {
+        super.visitTryWith(ctx)
+
+        if (exceptionType == null) {
+            diag.diag(DiagExceptionTypeNotDeclared(ctx))
+            return
+        }
+
+        val ty = types.getExpectation(ctx) ?: types[ctx.tryExpr!!] ?: return
+
+        types.expect(ctx.tryExpr!!, ty)
+        types.expect(ctx.fallbackExpr!!, ty)
+    }
+
     override fun visitConstMemory(ctx: stellaParser.ConstMemoryContext) {
         super.visitConstMemory(ctx)
 

@@ -312,6 +312,16 @@ class StellaTypeSynthesizer(
         types.learn(ctx, tryTy)
     }
 
+    override fun visitTryWith(ctx: stellaParser.TryWithContext) {
+        super.visitTryWith(ctx)
+
+        val tryTy = types.getSynthesized(ctx.tryExpr!!) ?: return
+        val fallbackTy = types.getSynthesized(ctx.fallbackExpr!!) ?: return
+
+        if (!(tryTy same fallbackTy)) return
+        types.learn(ctx, tryTy)
+    }
+
     override fun visitFix(ctx: stellaParser.FixContext) {
         super.visitFix(ctx)
 

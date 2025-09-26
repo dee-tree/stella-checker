@@ -46,4 +46,7 @@ private val errorsStep1 = arrayOf(
 
 private val errorsStep2 = arrayOf(
     ERROR_EXCEPTION_TYPE_NOT_DECLARED,
+    ERROR_AMBIGUOUS_THROW_TYPE,
+    ERROR_AMBIGUOUS_PANIC_TYPE,
+    ERROR_AMBIGUOUS_REFERENCE_TYPE,
 )
