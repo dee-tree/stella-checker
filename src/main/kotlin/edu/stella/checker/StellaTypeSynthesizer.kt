@@ -7,6 +7,7 @@ import edu.stella.type.FunTy
 import edu.stella.type.ListTy
 import edu.stella.type.NatTy
 import edu.stella.type.RecordTy
+import edu.stella.type.RefTy
 import edu.stella.type.SumTy
 import edu.stella.type.TupleTy
 import edu.stella.type.Ty
@@ -180,6 +181,26 @@ class StellaTypeSynthesizer(
         }
     }
 
+    override fun visitPatternList(ctx: stellaParser.PatternListContext) {
+        (patternTyScope as? ListTy)?.let { listTy ->
+            types.learn(ctx, listTy)
+            withPatternScope(listTy.of) {
+                super.visitPatternList(ctx)
+            }
+        }
+    }
+
+    override fun visitPatternCons(ctx: stellaParser.PatternConsContext) {
+        (patternTyScope as? ListTy)?.let { listTy ->
+            types.learn(ctx, listTy)
+
+            ctx.tail!!.accept(this)
+            withPatternScope(listTy.of) {
+                ctx.head!!.accept(this)
+            }
+        }
+    }
+
     override fun visitConstUnit(ctx: stellaParser.ConstUnitContext) {
         types.learn(ctx, UnitTy())
         super.visitConstUnit(ctx)
@@ -328,5 +349,25 @@ class StellaTypeSynthesizer(
         (types.getSynthesized(ctx.expr()) as? FunTy)?.let { funTy ->
             types.learn(ctx, funTy.ret)
         }
+    }
+
+    override fun visitRef(ctx: stellaParser.RefContext) {
+        super.visitRef(ctx)
+
+        val underlyingTy = types.getSynthesized(ctx.expr()) ?: return
+        types.learn(ctx, RefTy(underlyingTy))
+    }
+
+    override fun visitDeref(ctx: stellaParser.DerefContext) {
+        super.visitDeref(ctx)
+
+        val refTy = types.getSynthesized(ctx.expr()) as? RefTy ?: return
+        types.learn(ctx, refTy.of)
+    }
+
+    override fun visitAssign(ctx: stellaParser.AssignContext) {
+        super.visitAssign(ctx)
+
+        types.learn(ctx, UnitTy())
     }
 }

@@ -333,6 +333,12 @@ class DiagAmbiguousReferenceType(
     { "Ambiguous reference type in expression ${getText(ref).quote()}. Please, specify expected type explicitly" }
 )
 
+class DiagUnexpectedMemoryAddress(expr: stellaParser.ConstMemoryContext, expectedTy: Ty?) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_MEMORY_ADDRESS ,
+    expr.getParent() ?: expr,
+    { "Expected an expression of type ${expectedTy?.toString()?.quote()}, but got memory address ${getText(expr).quote()}" }
+)
+
 class DiagError(
     node: RuleContext,
     message: TokenStream.() -> String

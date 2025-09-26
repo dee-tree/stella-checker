@@ -12,6 +12,7 @@ import edu.stella.type.FunTy
 import edu.stella.type.ListTy
 import edu.stella.type.NatTy
 import edu.stella.type.RecordTy
+import edu.stella.type.RefTy
 import edu.stella.type.SumTy
 import edu.stella.type.TupleTy
 import edu.stella.type.Ty
@@ -63,6 +64,12 @@ class StellaTypeChecker(
         }
 
         super.visitIf(ctx)
+    }
+
+    override fun visitParenthesisedExpr(ctx: stellaParser.ParenthesisedExprContext) {
+        types.getExpectation(ctx)?.let { ty ->
+            types.expect(ctx.expr(), ty)
+        }
     }
 
     override fun visitMatch(ctx: stellaParser.MatchContext) {
@@ -459,6 +466,37 @@ class StellaTypeChecker(
 
         if (types.getSynthesized(ctx) == null && types.getExpectation(ctx) == null) {
             diag.diag(DiagAmbiguousReferenceType((ctx)))
+        }
+
+        types.getExpectation(ctx)?. let { ty ->
+            if (!ty.isRef) diag.diag(DiagUnexpectedMemoryAddress(ctx, ty))
+        }
+    }
+
+    override fun visitRef(ctx: stellaParser.RefContext) {
+        super.visitRef(ctx)
+
+        types.getExpectation(ctx)?.let { ty ->
+            when {
+                ty is RefTy -> types.expect(ctx.expr(), ty.of)
+                else -> types.expect(ctx, RefTy(AnyTy))
+            }
+        }
+    }
+
+    override fun visitDeref(ctx: stellaParser.DerefContext) {
+        super.visitDeref(ctx)
+
+        types.getExpectation(ctx)?.let { ty ->
+            types.expect(ctx.expr(), RefTy(ty))
+        } ?: types.expect(ctx.expr(), RefTy(AnyTy))
+    }
+
+    override fun visitAssign(ctx: stellaParser.AssignContext) {
+        super.visitAssign(ctx)
+
+        types[ctx.rhs!!]?.let { ty ->
+            types.expect(ctx.lhs!!, RefTy(ty))
         }
     }
 }

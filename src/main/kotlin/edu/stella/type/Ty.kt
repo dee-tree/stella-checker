@@ -12,6 +12,7 @@ sealed interface Ty {
     val isVariant: Boolean get() = this is VariantTy
     val isList: Boolean get() = this is ListTy
     val isBool: Boolean get() = this is BoolTy
+    val isRef: Boolean get() = this is RefTy
 
     abstract override fun toString(): String
     infix fun same(other: Ty?) = same(other, deep = true)
