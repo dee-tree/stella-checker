@@ -136,7 +136,7 @@ class DiagUnexpectedInjection private constructor(
 }
 
 class DiagMissingRecordField(
-    record: stellaParser.RecordContext,
+    record: stellaParser.ExprContext,
     missing: String,
     expectedTy: Ty
 ) : TypeCheckError(
@@ -166,7 +166,7 @@ class DiagUnexpectedRecordFieldAccess(
 )
 
 class DiagUnexpectedVariantLabel(
-    variant: stellaParser.VariantContext,
+    variant: stellaParser.ExprContext,
     unexpected: String,
     expectedTy: Ty
 ) : TypeCheckError(
@@ -205,12 +205,13 @@ class DiagTupleIndexOutOfBounds(
 )
 
 class DiagUnexpectedTupleLength(
-    tuple: stellaParser.TupleContext,
-    expectedTy: TupleTy
+    tuple: stellaParser.ExprContext,
+    expectedTy: TupleTy,
+    actualTy: TupleTy? = null
 ) : TypeCheckError(
     TypeCheckErrorKind.ERROR_UNEXPECTED_TUPLE_LENGTH,
     tuple.getParent() ?: tuple,
-    { "Unexpected tuple ${getText(tuple).quote()} length (${tuple.exprs.size}) of expected type ${expectedTy.toString().quote()} (${expectedTy.components.size})" }
+    { "Unexpected tuple ${getText(tuple).quote()} length ${actualTy?.let { "(${it.components.size})" }} of expected type ${expectedTy.toString().quote()} (${expectedTy.components.size})" }
 )
 
 class DiagAmbiguousSumType(

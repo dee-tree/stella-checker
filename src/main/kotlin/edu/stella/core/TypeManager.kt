@@ -1,14 +1,20 @@
 package edu.stella.core
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
+import edu.stella.checker.DiagMissingRecordField
 import edu.stella.checker.DiagUnexpectedLambda
 import edu.stella.checker.DiagUnexpectedList
 import edu.stella.checker.DiagUnexpectedParameterType
 import edu.stella.checker.DiagUnexpectedRecord
 import edu.stella.checker.DiagUnexpectedTuple
+import edu.stella.checker.DiagUnexpectedTupleLength
 import edu.stella.checker.DiagUnexpectedTypeForExpr
 import edu.stella.checker.DiagUnexpectedVariant
+import edu.stella.checker.DiagUnexpectedVariantLabel
+import edu.stella.type.RecordTy
+import edu.stella.type.TupleTy
 import edu.stella.type.Ty
+import edu.stella.type.VariantTy
 import edu.stella.utils.MapAst
 import org.antlr.v4.kotlinruntime.RuleContext
 import org.antlr.v4.kotlinruntime.tree.ParseTree
@@ -58,10 +64,35 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
     fun check(node: ParseTree, deep: Boolean = true) {
         val knownTy = this.getSynthesized(node)
         val expectedTy = getExpectation(node) ?: return // No expectations => any is possible
-//            ?: throw StellaCompileException("Cannot check types without expectation for node ${node.text.quote()}")
-        if (expectedTy.same(knownTy, deep) || knownTy == null) {
+        if (knownTy == null || knownTy subtypeOf expectedTy) {
             unchecked.remove(node)
             return
+        }
+
+        if (expectedTy.isRecord && knownTy.isRecord) {
+            expectedTy as RecordTy
+            knownTy as RecordTy
+
+            expectedTy.labels.firstOrNull { it !in knownTy.labels }?.let {
+                diagEngine.diag(DiagMissingRecordField(node as stellaParser.ExprContext, it, expectedTy))
+                return
+            }
+        } else if (expectedTy.isTuple && knownTy.isTuple) {
+            expectedTy as TupleTy
+            knownTy as TupleTy
+
+            if (expectedTy.components.size != knownTy.components.size) {
+                diagEngine.diag(DiagUnexpectedTupleLength(node as stellaParser.ExprContext, expectedTy, knownTy))
+            }
+        } else if (expectedTy.isVariant && knownTy.isVariant) {
+            expectedTy as VariantTy
+            knownTy as VariantTy
+
+            knownTy.components.forEach { (n, t) ->
+                if (n !in expectedTy.tags) {
+                    diagEngine.diag(DiagUnexpectedVariantLabel(node as stellaParser.ExprContext, n, expectedTy))
+                }
+            }
         }
 
         val diag = when {

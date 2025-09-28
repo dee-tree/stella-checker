@@ -16,13 +16,19 @@ class ExtensionChecker(private val program: stellaParser.ProgramContext) {
         Extensions.PANIC in this
     }
 
-    private operator fun contains(ext: Extensions): Boolean = program.extensions.any { it is stellaParser.AnExtensionContext && ext.ext in it.extensionNames.map { it.text!! } }
+    val isStructuralSubtypingEnabled by lazy {
+        Extensions.STRUCTURAL_SUBTYPING in this
+    }
+
+    private operator fun contains(ext: Extensions): Boolean = program.extensions.any {
+        it is stellaParser.AnExtensionContext && ext.ext in it.extensionNames.map { it.text!! }
+    }
 
 
     enum class Extensions(val ext: String) {
         EXCEPTION_TYPE_DECLARATION("#exception-type-declaration"),
         EXCEPTION_TYPE_VARIANT("#open-variant-exceptions"),
         PANIC("#panic"),
-
+        STRUCTURAL_SUBTYPING("#structural-subtyping"),
     }
 }

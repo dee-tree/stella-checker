@@ -26,7 +26,7 @@ class StellaTypeChecker(
     override val types: TypeManager,
     override val diag: DiagnosticsEngine
 ) : SemaASTVisitor<Unit>() {
-    private val extensions = ExtensionChecker(program)
+    private val extensions = ExtensionChecker(program).also { Ty.initExtensions(it) }
     private var exceptionType: Ty? = null
 
     fun check() {
@@ -70,6 +70,7 @@ class StellaTypeChecker(
         types.getExpectation(ctx)?.let { ty ->
             types.expect(ctx.expr(), ty)
         }
+        super.visitParenthesisedExpr(ctx)
     }
 
     override fun visitMatch(ctx: stellaParser.MatchContext) {
@@ -184,7 +185,7 @@ class StellaTypeChecker(
             }
 
             for (actualLabel in actualLabels) {
-                if (actualLabel !in expectedLabels) {
+                if (actualLabel !in expectedLabels && !Ty.withStructuralSubtyping) {
                     diag.diag(DiagUnexpectedRecordField(ctx, actualLabel, ty))
                 }
             }
@@ -327,6 +328,11 @@ class StellaTypeChecker(
         }
 
         super.visitTypeAsc(ctx)
+    }
+
+    override fun visitTypeCast(ctx: stellaParser.TypeCastContext) {
+        super.visitTypeCast(ctx)
+        // no extra checking
     }
 
     override fun visitInl(ctx: stellaParser.InlContext) {

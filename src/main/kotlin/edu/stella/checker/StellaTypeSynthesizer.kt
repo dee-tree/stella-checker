@@ -255,6 +255,11 @@ class StellaTypeSynthesizer(
         types.learn(ctx, ctx.stellatype().asTy)
     }
 
+    override fun visitTypeCast(ctx: stellaParser.TypeCastContext) {
+        super.visitTypeCast(ctx)
+        types.learn(ctx, ctx.stellatype().asTy)
+    }
+
     override fun visitPatternBinding(ctx: stellaParser.PatternBindingContext) {
         ctx.expr().accept(this)
         ctx.pattern().accept(this)

@@ -16,5 +16,7 @@ val stellaParser.StellatypeContext.asTy: Ty
         is stellaParser.TypeVariantContext -> VariantTy(this.fieldTypes.map { it.label!!.text!! to it.stellatype()?.asTy })
         is stellaParser.TypeSumContext -> SumTy(this.left!!.asTy, this.right!!.asTy, this)
         is stellaParser.TypeRefContext -> RefTy(this.stellatype().asTy)
+        is stellaParser.TypeTopContext -> TopTy()
+        is stellaParser.TypeBottomContext -> BotTy()
         else -> TODO("Type mapping rule is required for type ${this.text.quote()} (${this::class.simpleName?.quote()})")
     }

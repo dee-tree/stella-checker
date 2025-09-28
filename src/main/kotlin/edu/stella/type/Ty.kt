@@ -1,6 +1,7 @@
 package edu.stella.type
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
+import edu.stella.checker.ExtensionChecker
 
 sealed interface Ty {
     val astType: stellaParser.StellatypeContext?
@@ -17,29 +18,83 @@ sealed interface Ty {
     abstract override fun toString(): String
     infix fun same(other: Ty?) = same(other, deep = true)
     fun same(other: Ty?, deep: Boolean = true): Boolean
+    infix fun subtypeOf(superTy: Ty?): Boolean
+
+    companion object {
+        private lateinit var extensions: ExtensionChecker
+        fun initExtensions(ext: ExtensionChecker) {
+            extensions = ext
+        }
+
+        val withStructuralSubtyping: Boolean
+            get() = extensions.isStructuralSubtypingEnabled
+    }
+}
+
+data class TopTy(val expr: stellaParser.ExprContext? = null) : Ty {
+    override fun same(other: Ty?, deep: Boolean): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun subtypeOf(superTy: Ty?): Boolean = superTy is TopTy || superTy is AnyTy
+
+    override fun toString(): String = "Top"
+}
+
+data class BotTy(val expr: stellaParser.ExprContext? = null) : Ty {
+
+    override fun same(other: Ty?, deep: Boolean): Boolean {
+        TODO()
+    }
+
+    override fun subtypeOf(superTy: Ty?): Boolean = when (superTy) {
+        null -> false
+        is BadTy -> false
+        is BotTy -> true
+        else if Ty.withStructuralSubtyping -> true
+        else -> false
+    }
+
+    override fun toString(): String = "Bot"
 }
 
 data class BadTy(val expr: stellaParser.ExprContext? = null) : Ty {
     override fun toString(): String = "BAD"
 
     override fun same(other: Ty?, deep: Boolean): Boolean = other is BadTy
+
+    override fun subtypeOf(superTy: Ty?) = false
 }
 
 data object AnyTy : Ty {
     override fun same(other: Ty?, deep: Boolean): Boolean = other !is BadTy
     override fun toString(): String = "*"
+
+    override fun subtypeOf(superTy: Ty?): Boolean = superTy !is BadTy
 }
 
 data class BoolTy(override val astType: stellaParser.TypeBoolContext? = null) : Ty {
     override fun toString(): String = "Bool"
 
-    override fun same(other: Ty?, deep: Boolean): Boolean = other is BoolTy// || other is ErrorTy
+    override fun same(other: Ty?, deep: Boolean): Boolean = other is BoolTy
+
+    override fun subtypeOf(superTy: Ty?): Boolean = when (superTy) {
+        is BoolTy -> true
+        is TopTy if Ty.withStructuralSubtyping -> true
+        else -> false
+    }
 }
 
 data class NatTy(override val astType: stellaParser.TypeNatContext? = null) : Ty {
     override fun toString(): String = "Nat"
 
-    override fun same(other: Ty?, deep: Boolean): Boolean = other is NatTy// || other is ErrorTy
+    override fun same(other: Ty?, deep: Boolean): Boolean = other is NatTy
+
+    override fun subtypeOf(superTy: Ty?): Boolean = when (superTy) {
+        is NatTy -> true
+        is TopTy if Ty.withStructuralSubtyping -> true
+        else -> false
+    }
 }
 
 data class FunTy(
@@ -61,6 +116,22 @@ data class FunTy(
         if (thisNorm.params.size != otherNorm.params.size) return false
         thisNorm.params.zip(otherNorm.params).forEach { (a, b) ->
             if (!a.same(b, deep)) return false
+        }
+        return true
+    }
+
+    override fun subtypeOf(superTy: Ty?): Boolean {
+        if (superTy == null) return false
+        if (superTy is TopTy && Ty.withStructuralSubtyping) return true
+        if (superTy !is FunTy) return false
+
+        val thisNorm = normalized
+        val otherNorm = normalized
+
+        if (thisNorm.ret subtypeOf otherNorm.ret) return false // covariance
+        if (thisNorm.params.size != otherNorm.params.size) return false
+        thisNorm.params.zip(otherNorm.params).forEach { (thisP, otherP) ->
+            if (!(otherP subtypeOf thisP)) return false // contravariance
         }
         return true
     }
@@ -93,6 +164,19 @@ data class TupleTy(
         return true
     }
 
+    override fun subtypeOf(superTy: Ty?): Boolean {
+        if (superTy == null) return false
+        if (superTy is TopTy && Ty.withStructuralSubtyping) return true
+        if (superTy !is TupleTy) return false
+
+        if (components.size != superTy.components.size) return false
+
+        components.zip(superTy.components).forEach { (thisC, superC) ->
+            if (!(thisC subtypeOf superC)) return false
+        }
+        return true
+    }
+
     fun getComponentTyOrNull(i: Int): Ty? = when {
         i < 0 -> null
         i > components.lastIndex -> null
@@ -118,6 +202,29 @@ data class RecordTy(
             val (bn, bt) = b
             if (an != bn) return false
             if (!at.same(bt, deep)) return false
+        }
+        return true
+    }
+
+    override fun subtypeOf(superTy: Ty?): Boolean {
+        if (superTy == null) return false
+        if (superTy is TopTy && Ty.withStructuralSubtyping) return true
+        if (superTy !is RecordTy) return false
+
+        if (components.size != superTy.components.size && !Ty.withStructuralSubtyping) return false
+        if (components.size < superTy.components.size && Ty.withStructuralSubtyping) return false
+
+        if (Ty.withStructuralSubtyping) {
+            superTy.components.forEach { (n, t) ->
+                if (!(t subtypeOf getComponentTyOrNull(n))) return false
+            }
+        } else {
+            components.zip(superTy.components).forEach { (thisC, superC) ->
+                val (thisN, thisT) = thisC
+                val (superN, superT) = superC
+                if (thisN != superN) return false
+                if (!(thisT subtypeOf superT)) return false
+            }
         }
         return true
     }
@@ -158,6 +265,31 @@ data class VariantTy(
         return true
     }
 
+    override fun subtypeOf(superTy: Ty?): Boolean {
+        if (superTy == null) return false
+        if (superTy is TopTy && Ty.withStructuralSubtyping) return true
+        if (superTy !is VariantTy) return false
+
+        if (components.size != superTy.components.size && !Ty.withStructuralSubtyping) return false
+        if (components.size > superTy.components.size && Ty.withStructuralSubtyping) return false
+
+        if (Ty.withStructuralSubtyping) {
+            components.forEach { (n, t) ->
+                if (n !in superTy.tags) return false
+                if (of(n) == null && superTy.of(n) != null) return false
+                if (of(n)?.subtypeOf(superTy.of(n)) == false) return false
+            }
+        } else {
+            components.zip(superTy.components).forEach { (thisC, superC) ->
+                val (thisN, thisT) = thisC
+                val (superN, superT) = superC
+                if (thisN != superN) return false
+                if (thisT?.subtypeOf(superT) != true && (thisT != null || thisT != superT)) return false
+            }
+        }
+        return true
+    }
+
     val tags: List<String>
         get() = components.map { it.first }
 
@@ -178,6 +310,14 @@ data class ListTy(
         if (!deep) return true
         return of.same(other.of, deep)
     }
+
+    override fun subtypeOf(superTy: Ty?): Boolean {
+        if (superTy == null) return false
+        if (superTy is TopTy && Ty.withStructuralSubtyping) return true
+        if (superTy !is ListTy) return false
+
+        return of subtypeOf superTy.of
+    }
 }
 
 data class UnitTy(
@@ -188,6 +328,13 @@ data class UnitTy(
     override fun same(other: Ty?, deep: Boolean): Boolean {
 //        if (other is ErrorTy) return true
         return other is UnitTy
+    }
+
+    override fun subtypeOf(superTy: Ty?): Boolean = when (superTy) {
+        null -> false
+        is UnitTy -> true
+        is TopTy if Ty.withStructuralSubtyping -> true
+        else -> false
     }
 }
 
@@ -206,6 +353,16 @@ data class SumTy(
         if (!(right same other.right)) return false
         return true
     }
+
+    override fun subtypeOf(superTy: Ty?): Boolean {
+        if (superTy == null) return false
+        if (superTy is TopTy && Ty.withStructuralSubtyping) return true
+        if (superTy !is SumTy) return false
+
+        if (!(left subtypeOf superTy.left)) return false
+        if (!(right subtypeOf superTy.right)) return false
+        return true
+    }
 }
 
 data class RefTy(val of: Ty) : Ty {
@@ -215,6 +372,14 @@ data class RefTy(val of: Ty) : Ty {
         if (other !is RefTy) return false
         if (!deep) return true
         return of same other.of
+    }
+
+    override fun subtypeOf(superTy: Ty?): Boolean {
+        if (superTy == null) return false
+        if (superTy is TopTy && Ty.withStructuralSubtyping) return true
+        if (superTy !is RefTy) return false
+
+        return of subtypeOf superTy.of && superTy.of subtypeOf of
     }
 }
 
