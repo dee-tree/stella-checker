@@ -33,6 +33,16 @@ class DiagUnexpectedTypeForExpr(
     { "Expected type ${expected.toString().quote()} for expression ${getText(expr).quote()}, but got ${actual.toString().quote()}" }
 )
 
+class DiagUnexpectedSubtypeForExpr(
+    expr: RuleContext,
+    expected: Ty,
+    actual: Ty?
+) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_SUBTYPE,
+    expr.getParent() ?: expr,
+    { "Expected subtype of ${expected.toString().quote()} for expression ${getText(expr).quote()}, but got ${actual.toString().quote()}" }
+)
+
 class DiagMissingMain(ctx: stellaParser.ProgramContext) : TypeCheckError(
     TypeCheckErrorKind.ERROR_MISSING_MAIN, ctx, { "main".quote() + " is missing" })
 

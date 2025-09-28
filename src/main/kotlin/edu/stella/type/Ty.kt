@@ -80,6 +80,7 @@ data class BoolTy(override val astType: stellaParser.TypeBoolContext? = null) : 
 
     override fun subtypeOf(superTy: Ty?): Boolean = when (superTy) {
         is BoolTy -> true
+        is AnyTy -> true
         is TopTy if Ty.withStructuralSubtyping -> true
         else -> false
     }
@@ -92,6 +93,7 @@ data class NatTy(override val astType: stellaParser.TypeNatContext? = null) : Ty
 
     override fun subtypeOf(superTy: Ty?): Boolean = when (superTy) {
         is NatTy -> true
+        is AnyTy -> true
         is TopTy if Ty.withStructuralSubtyping -> true
         else -> false
     }
@@ -122,13 +124,14 @@ data class FunTy(
 
     override fun subtypeOf(superTy: Ty?): Boolean {
         if (superTy == null) return false
+        if (superTy is AnyTy) return true
         if (superTy is TopTy && Ty.withStructuralSubtyping) return true
         if (superTy !is FunTy) return false
 
         val thisNorm = normalized
-        val otherNorm = normalized
+        val otherNorm = superTy.normalized
 
-        if (thisNorm.ret subtypeOf otherNorm.ret) return false // covariance
+        if (!(thisNorm.ret subtypeOf otherNorm.ret)) return false // covariance
         if (thisNorm.params.size != otherNorm.params.size) return false
         thisNorm.params.zip(otherNorm.params).forEach { (thisP, otherP) ->
             if (!(otherP subtypeOf thisP)) return false // contravariance
@@ -141,10 +144,6 @@ data class FunTy(
             params.size > 1 -> FunTy(FunTy(ret, listOf(params.first())).normalized, params.subList(0, params.size - 1), astType).normalized
             else -> this
         }
-//        get() = when (ret) {
-//            is FunTy -> FunTy(ret.ret, params + ret.params, astType)
-//            else -> this
-//        }
 }
 
 data class TupleTy(
@@ -166,6 +165,7 @@ data class TupleTy(
 
     override fun subtypeOf(superTy: Ty?): Boolean {
         if (superTy == null) return false
+        if (superTy is AnyTy) return true
         if (superTy is TopTy && Ty.withStructuralSubtyping) return true
         if (superTy !is TupleTy) return false
 
@@ -208,6 +208,7 @@ data class RecordTy(
 
     override fun subtypeOf(superTy: Ty?): Boolean {
         if (superTy == null) return false
+        if (superTy is AnyTy) return true
         if (superTy is TopTy && Ty.withStructuralSubtyping) return true
         if (superTy !is RecordTy) return false
 
@@ -267,6 +268,7 @@ data class VariantTy(
 
     override fun subtypeOf(superTy: Ty?): Boolean {
         if (superTy == null) return false
+        if (superTy is AnyTy) return true
         if (superTy is TopTy && Ty.withStructuralSubtyping) return true
         if (superTy !is VariantTy) return false
 
@@ -313,6 +315,7 @@ data class ListTy(
 
     override fun subtypeOf(superTy: Ty?): Boolean {
         if (superTy == null) return false
+        if (superTy is AnyTy) return true
         if (superTy is TopTy && Ty.withStructuralSubtyping) return true
         if (superTy !is ListTy) return false
 
@@ -333,6 +336,7 @@ data class UnitTy(
     override fun subtypeOf(superTy: Ty?): Boolean = when (superTy) {
         null -> false
         is UnitTy -> true
+        is AnyTy -> true
         is TopTy if Ty.withStructuralSubtyping -> true
         else -> false
     }
@@ -356,6 +360,7 @@ data class SumTy(
 
     override fun subtypeOf(superTy: Ty?): Boolean {
         if (superTy == null) return false
+        if (superTy is AnyTy) return true
         if (superTy is TopTy && Ty.withStructuralSubtyping) return true
         if (superTy !is SumTy) return false
 
@@ -376,10 +381,12 @@ data class RefTy(val of: Ty) : Ty {
 
     override fun subtypeOf(superTy: Ty?): Boolean {
         if (superTy == null) return false
+        if (superTy is AnyTy) return true
         if (superTy is TopTy && Ty.withStructuralSubtyping) return true
         if (superTy !is RefTy) return false
 
-        return of subtypeOf superTy.of && superTy.of subtypeOf of
+        return of subtypeOf superTy.of
+//        return of subtypeOf superTy.of && superTy.of subtypeOf of
     }
 }
 

@@ -9,6 +9,7 @@ interface SemaStage<T> {
     val symbols: SymbolTable
     val types: TypeManager
     val diag: DiagnosticsEngine
+    val extensions: ExtensionChecker
 
     fun getTy(symbol: String, scope: ParseTree): Ty? = symbols.getOrNull(symbol, scope)?.let { types.getSynthesized(it) }
 }

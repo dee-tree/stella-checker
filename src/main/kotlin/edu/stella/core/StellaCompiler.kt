@@ -2,8 +2,10 @@ package edu.stella.core
 
 import com.strumenta.antlrkotlin.parsers.generated.stellaLexer
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
+import edu.stella.checker.ExtensionChecker
 import edu.stella.checker.StellaTypeChecker
 import edu.stella.checker.SymbolCollector
+import edu.stella.type.Ty
 import org.antlr.v4.kotlinruntime.CommonTokenStream
 import org.antlr.v4.kotlinruntime.StringCharStream
 import java.io.PrintStream
@@ -14,13 +16,14 @@ class StellaCompiler(private val sourceCode: String, diagOutput: PrintStream = S
     private val parser = stellaParser(tokenStream)
 
     val diagEngine = DiagnosticsEngine(tokenStream, diagOutput)
-    val typeManager = TypeManager(diagEngine)
 
     fun compile() {
         val ast = parser.program()
         val symbols = ast.accept(SymbolCollector())
 
-        StellaTypeChecker(ast, symbols, typeManager, diagEngine).check()
+        val extensions = ExtensionChecker(ast).also { Ty.initExtensions(it) }
+        val typeManager = TypeManager(diagEngine, extensions)
+        StellaTypeChecker(ast, symbols, typeManager, extensions, diagEngine).check()
     }
 
     companion object {

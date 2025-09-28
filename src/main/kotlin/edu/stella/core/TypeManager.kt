@@ -6,11 +6,13 @@ import edu.stella.checker.DiagUnexpectedLambda
 import edu.stella.checker.DiagUnexpectedList
 import edu.stella.checker.DiagUnexpectedParameterType
 import edu.stella.checker.DiagUnexpectedRecord
+import edu.stella.checker.DiagUnexpectedSubtypeForExpr
 import edu.stella.checker.DiagUnexpectedTuple
 import edu.stella.checker.DiagUnexpectedTupleLength
 import edu.stella.checker.DiagUnexpectedTypeForExpr
 import edu.stella.checker.DiagUnexpectedVariant
 import edu.stella.checker.DiagUnexpectedVariantLabel
+import edu.stella.checker.ExtensionChecker
 import edu.stella.type.RecordTy
 import edu.stella.type.TupleTy
 import edu.stella.type.Ty
@@ -19,7 +21,7 @@ import edu.stella.utils.MapAst
 import org.antlr.v4.kotlinruntime.RuleContext
 import org.antlr.v4.kotlinruntime.tree.ParseTree
 
-class TypeManager(private val diagEngine: DiagnosticsEngine) {
+class TypeManager(private val diagEngine: DiagnosticsEngine, private val extensions: ExtensionChecker) {
     private val context = MapAst<Ty>()
     private val expectation = MapAst<Ty>()
 
@@ -49,8 +51,8 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
 
     fun getExpectation(node: ParseTree): Ty? = getTy(node, expectation)
 
-    fun expect(node: ParseTree, ty: Ty) {
-        if (node in expectation && !(ty same expectation[node]))
+    fun expect(node: ParseTree, ty: Ty, deep: Boolean = true, contravariant: Boolean = false) {
+        if (node in expectation && (!contravariant && !(ty subtypeOf expectation[node]) || (contravariant && expectation[node]?.subtypeOf(ty) != true)))
             diagEngine.diag(DiagUnexpectedTypeForExpr(node as RuleContext, ty, expectation[node]!!))
         expectation[node] = ty
         unchecked[node] = ty
@@ -58,13 +60,14 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
         if (node is stellaParser.ParenthesisedExprContext) expectation[node.expr()] = ty
         if (node is stellaParser.TerminatingSemicolonContext) expectation[node.expr()] = ty
 
-        check(node)
+        check(node, deep, contravariant)
     }
 
-    fun check(node: ParseTree, deep: Boolean = true) {
+    fun check(node: ParseTree, deep: Boolean = true, contravariant: Boolean = false) {
         val knownTy = this.getSynthesized(node)
         val expectedTy = getExpectation(node) ?: return // No expectations => any is possible
-        if (knownTy == null || knownTy subtypeOf expectedTy) {
+        if (knownTy == null || (!contravariant && deep && knownTy subtypeOf expectedTy) || (!contravariant && !deep && knownTy.same(expectedTy, false))
+            || (contravariant && deep && expectedTy subtypeOf knownTy) || (contravariant && !deep && expectedTy.same(knownTy, false))) {
             unchecked.remove(node)
             return
         }
@@ -103,6 +106,7 @@ class TypeManager(private val diagEngine: DiagnosticsEngine) {
             node is stellaParser.RecordContext && !expectedTy.isRecord -> DiagUnexpectedRecord(node, expectedTy)
             node is stellaParser.VariantContext && !expectedTy.isVariant -> DiagUnexpectedVariant(node, expectedTy)
             node is stellaParser.AbstractionContext && !expectedTy.isFunction -> DiagUnexpectedLambda(node, expectedTy)
+            extensions.isStructuralSubtypingEnabled -> DiagUnexpectedSubtypeForExpr(node as RuleContext, expectedTy, this.getSynthesized(node))
             else -> DiagUnexpectedTypeForExpr(node as RuleContext, expectedTy, this.getSynthesized(node))
         }
         diagEngine.diag(diag)

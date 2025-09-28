@@ -20,6 +20,10 @@ class ExtensionChecker(private val program: stellaParser.ProgramContext) {
         Extensions.STRUCTURAL_SUBTYPING in this
     }
 
+    val isAmbiguousTypeAsBottomEnabled by lazy {
+        Extensions.AMBIGUOUS_TYPE_AS_BOTTOM in this
+    }
+
     private operator fun contains(ext: Extensions): Boolean = program.extensions.any {
         it is stellaParser.AnExtensionContext && ext.ext in it.extensionNames.map { it.text!! }
     }
@@ -30,5 +34,6 @@ class ExtensionChecker(private val program: stellaParser.ProgramContext) {
         EXCEPTION_TYPE_VARIANT("#open-variant-exceptions"),
         PANIC("#panic"),
         STRUCTURAL_SUBTYPING("#structural-subtyping"),
+        AMBIGUOUS_TYPE_AS_BOTTOM("#ambiguous-type-as-bottom"),
     }
 }

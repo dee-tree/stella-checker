@@ -3,6 +3,7 @@ package edu.stella.checker
 import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.type.AnyTy
 import edu.stella.type.BoolTy
+import edu.stella.type.BotTy
 import edu.stella.type.FunTy
 import edu.stella.type.ListTy
 import edu.stella.type.NatTy
@@ -16,7 +17,7 @@ import edu.stella.type.VariantTy
 import edu.stella.type.asTy
 
 class StellaTypeSynthesizer(
-    private val delegate: SemaStage<Unit>
+    private val delegate: SemaStage<Unit>,
 ) :  SemaASTVisitor<Unit>(),  SemaStage<Unit> by delegate {
     override fun defaultResult() = Unit
 
@@ -285,7 +286,20 @@ class StellaTypeSynthesizer(
 
     override fun visitVariant(ctx: stellaParser.VariantContext) {
         super.visitVariant(ctx)
-        return // no way to synthesize variant type
+
+        if (extensions.isStructuralSubtypingEnabled) types.learn(ctx, VariantTy(listOf(ctx.label!!.text!! to ctx.expr()?.let { types.getSynthesized(it) } )))
+        if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
+        return // no way to synthesize variant type without extensions
+    }
+
+    override fun visitInl(ctx: stellaParser.InlContext) {
+        super.visitInl(ctx)
+        if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
+    }
+
+    override fun visitInr(ctx: stellaParser.InrContext) {
+        super.visitInr(ctx)
+        if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
     }
 
     override fun visitIf(ctx: stellaParser.IfContext) {
@@ -320,12 +334,23 @@ class StellaTypeSynthesizer(
 
     override fun visitList(ctx: stellaParser.ListContext) {
         super.visitList(ctx)
-        val of = types.getSynthesized(ctx.exprs.firstOrNull() ?: return) ?: return
+
+        val of = ctx.exprs.firstOrNull()?.let { types.getSynthesized(it) } ?: run {
+            if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, ListTy(BotTy()))
+            return
+        }
+
         types.learn(ctx, ListTy(of))
     }
 
     override fun visitPanic(ctx: stellaParser.PanicContext) {
         super.visitPanic(ctx)
+        if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
+    }
+
+    override fun visitThrow(ctx: stellaParser.ThrowContext) {
+        super.visitThrow(ctx)
+        if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
     }
 
     override fun visitTryCatch(ctx: stellaParser.TryCatchContext) {
@@ -374,5 +399,10 @@ class StellaTypeSynthesizer(
         super.visitAssign(ctx)
 
         types.learn(ctx, UnitTy())
+    }
+
+    override fun visitConstMemory(ctx: stellaParser.ConstMemoryContext) {
+        super.visitConstMemory(ctx)
+        if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
     }
 }

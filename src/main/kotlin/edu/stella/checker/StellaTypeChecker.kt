@@ -24,9 +24,9 @@ class StellaTypeChecker(
     private val program: stellaParser.ProgramContext,
     override val symbols: SymbolTable,
     override val types: TypeManager,
+    override val extensions: ExtensionChecker,
     override val diag: DiagnosticsEngine
 ) : SemaASTVisitor<Unit>() {
-    private val extensions = ExtensionChecker(program).also { Ty.initExtensions(it) }
     private var exceptionType: Ty? = null
 
     fun check() {
@@ -92,7 +92,7 @@ class StellaTypeChecker(
     override fun visitAbstraction(ctx: stellaParser.AbstractionContext) {
         (types.getExpectation(ctx) as? FunTy)?.let { expected ->
             expected.params.zip(ctx.paramDecls).forEach { (expTy, param) ->
-                types.expect(param, expTy)
+                types.expect(param, expTy, contravariant = true)
             }
 
             types.expect(ctx.returnExpr!!, expected.ret)
@@ -285,8 +285,9 @@ class StellaTypeChecker(
     override fun visitTail(ctx: stellaParser.TailContext) {
         types.check(ctx, deep = false)
 
-        val listTy = (types.getExpectation(ctx) as? ListTy) ?: ListTy(AnyTy)
-        types.expect(ctx.expr(), listTy)
+        (types.getExpectation(ctx) as? ListTy)?.let { listTy ->
+            types.expect(ctx.expr(), listTy)
+        } ?: types.expect(ctx.expr(), ListTy(AnyTy), deep = false)
 
         super.visitTail(ctx)
     }
@@ -296,7 +297,7 @@ class StellaTypeChecker(
 
         types.getExpectation(ctx)?.let { eTy ->
             types.expect(ctx.expr(), ListTy(eTy))
-        } ?: types.expect(ctx.expr(), ListTy(AnyTy))
+        } ?: types.expect(ctx.expr(), ListTy(AnyTy), deep = false)
 
     }
 
@@ -436,8 +437,6 @@ class StellaTypeChecker(
     }
 
     override fun visitTryCatch(ctx: stellaParser.TryCatchContext) {
-        super.visitTryCatch(ctx)
-
         if (exceptionType == null) {
             diag.diag(DiagExceptionTypeNotDeclared(ctx))
             return
@@ -451,11 +450,10 @@ class StellaTypeChecker(
         if (!exceptionType!!.patternChecker().isValidPattern(ctx.pattern())) {
             diag.diag(DiagUnexpectedPatternForType(ctx.pattern(), ty))
         }
+        super.visitTryCatch(ctx)
     }
 
     override fun visitTryWith(ctx: stellaParser.TryWithContext) {
-        super.visitTryWith(ctx)
-
         if (exceptionType == null) {
             diag.diag(DiagExceptionTypeNotDeclared(ctx))
             return
@@ -465,6 +463,8 @@ class StellaTypeChecker(
 
         types.expect(ctx.tryExpr!!, ty)
         types.expect(ctx.fallbackExpr!!, ty)
+
+        super.visitTryWith(ctx)
     }
 
     override fun visitConstMemory(ctx: stellaParser.ConstMemoryContext) {
@@ -485,17 +485,17 @@ class StellaTypeChecker(
         types.getExpectation(ctx)?.let { ty ->
             when {
                 ty is RefTy -> types.expect(ctx.expr(), ty.of)
-                else -> types.expect(ctx, RefTy(AnyTy))
+                else -> types.expect(ctx, RefTy(AnyTy), deep = false)
             }
         }
     }
 
     override fun visitDeref(ctx: stellaParser.DerefContext) {
-        super.visitDeref(ctx)
-
         types.getExpectation(ctx)?.let { ty ->
             types.expect(ctx.expr(), RefTy(ty))
-        } ?: types.expect(ctx.expr(), RefTy(AnyTy))
+        } ?: types.expect(ctx.expr(), RefTy(AnyTy), deep = false)
+
+        super.visitDeref(ctx)
     }
 
     override fun visitAssign(ctx: stellaParser.AssignContext) {
