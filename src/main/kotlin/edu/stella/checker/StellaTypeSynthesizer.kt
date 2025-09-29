@@ -294,12 +294,16 @@ class StellaTypeSynthesizer(
 
     override fun visitInl(ctx: stellaParser.InlContext) {
         super.visitInl(ctx)
-        if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
+        if (extensions.isAmbiguousTypeAsBottomEnabled) types.getSynthesized(ctx.expr())?.let {
+            types.learn(ctx, SumTy(it, BotTy()))
+        }
     }
 
     override fun visitInr(ctx: stellaParser.InrContext) {
         super.visitInr(ctx)
-        if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
+        if (extensions.isAmbiguousTypeAsBottomEnabled) types.getSynthesized(ctx.expr())?.let {
+            types.learn(ctx, SumTy(BotTy(), it))
+        }
     }
 
     override fun visitIf(ctx: stellaParser.IfContext) {
