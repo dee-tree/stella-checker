@@ -109,7 +109,8 @@ class StellaTypeSynthesizer(
     override fun visitApplication(ctx: stellaParser.ApplicationContext) {
         super.visitApplication(ctx)
 
-        val funcTy = types.getSynthesized(ctx.func!!) as? FunTy ?: return
+        val funcTy = types.getSynthesized(ctx.func!!) ?: return
+        funcTy as? FunTy ?: return
         types.learn(ctx, funcTy.ret)
     }
 
@@ -288,7 +289,7 @@ class StellaTypeSynthesizer(
         super.visitVariant(ctx)
 
         if (extensions.isStructuralSubtypingEnabled) types.learn(ctx, VariantTy(listOf(ctx.label!!.text!! to ctx.expr()?.let { types.getSynthesized(it) } )))
-        if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
+        else if (extensions.isAmbiguousTypeAsBottomEnabled) types.learn(ctx, BotTy())
         return // no way to synthesize variant type without extensions
     }
 
@@ -380,9 +381,9 @@ class StellaTypeSynthesizer(
     override fun visitFix(ctx: stellaParser.FixContext) {
         super.visitFix(ctx)
 
-        (types.getSynthesized(ctx.expr()) as? FunTy)?.let { funTy ->
-            types.learn(ctx, funTy.ret)
-        }
+        val funTy = types.getSynthesized(ctx.expr()) ?: return
+        funTy as? FunTy ?: return
+        types.learn(ctx, funTy.ret)
     }
 
     override fun visitRef(ctx: stellaParser.RefContext) {

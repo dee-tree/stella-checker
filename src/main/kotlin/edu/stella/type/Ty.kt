@@ -217,7 +217,7 @@ data class RecordTy(
 
         if (Ty.withStructuralSubtyping) {
             superTy.components.forEach { (n, t) ->
-                if (!(t subtypeOf getComponentTyOrNull(n))) return false
+                if (getComponentTyOrNull(n)?.subtypeOf(t) != true) return false
             }
         } else {
             components.zip(superTy.components).forEach { (thisC, superC) ->
@@ -385,16 +385,6 @@ data class RefTy(val of: Ty) : Ty {
         if (superTy is TopTy && Ty.withStructuralSubtyping) return true
         if (superTy !is RefTy) return false
 
-        return of subtypeOf superTy.of
-//        return of subtypeOf superTy.of && superTy.of subtypeOf of
+        return of subtypeOf superTy.of && superTy.of subtypeOf of
     }
 }
-
-//data class ErrorTy(override val astType: stellaParser.TypeBoolContext? = null) : Ty {
-//    override fun toString(): String = "Error"
-//
-//    override fun same(other: Ty?, deep: Boolean): Boolean {
-//        if (other is BadTy) return false
-//        return true
-//    }
-//}

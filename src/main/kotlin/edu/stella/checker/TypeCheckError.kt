@@ -350,6 +350,24 @@ class DiagUnexpectedMemoryAddress(expr: stellaParser.ConstMemoryContext, expecte
     { "Expected an expression of type ${expectedTy?.toString()?.quote()}, but got memory address ${getText(expr).quote()}" }
 )
 
+class DiagIncorrectArityOfMain(fd: stellaParser.DeclFunContext) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_INCORRECT_ARITY_OF_MAIN,
+    fd,
+    { "Expected exactly 1 argument for `main`, but got ${fd.paramDecls.size}" }
+)
+
+class DiagIncorrectNumberOfArgs(app: stellaParser.ExprContext, expectedNum: Int, actual: Int) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_INCORRECT_NUMBER_OF_ARGUMENTS,
+    app.getParent() ?: app ,
+    { "Expected $expectedNum arguments for application, but got $actual" }
+)
+
+class DiagUnexpectedNumberOfParamsInLambda(lambda: stellaParser.AbstractionContext, expectedNum: Int) : TypeCheckError(
+    TypeCheckErrorKind.ERROR_UNEXPECTED_NUMBER_OF_PARAMETERS_IN_LAMBDA,
+    lambda.getParent() ?: lambda,
+    { "Expected $expectedNum parameters for lambda, but got ${lambda.paramDecls.size}" }
+)
+
 class DiagError(
     node: RuleContext,
     message: TokenStream.() -> String

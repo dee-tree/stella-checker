@@ -24,6 +24,11 @@ class MissingMainChecker(private val diag: DiagnosticsEngine) : stellaParserBase
     override fun visitDeclFun(ctx: stellaParser.DeclFunContext) {
         super.visitDeclFun(ctx)
 
-        if (ctx.name?.text == "main") hasMain = true
+        if (ctx.name?.text == "main") {
+            hasMain = true
+
+            if (ctx.paramDecls.size != 1)
+                diag.diag(DiagIncorrectArityOfMain(ctx))
+        }
     }
 }

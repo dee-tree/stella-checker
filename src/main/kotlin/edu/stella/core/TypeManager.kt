@@ -4,6 +4,7 @@ import com.strumenta.antlrkotlin.parsers.generated.stellaParser
 import edu.stella.checker.DiagMissingRecordField
 import edu.stella.checker.DiagUnexpectedLambda
 import edu.stella.checker.DiagUnexpectedList
+import edu.stella.checker.DiagUnexpectedNumberOfParamsInLambda
 import edu.stella.checker.DiagUnexpectedParameterType
 import edu.stella.checker.DiagUnexpectedRecord
 import edu.stella.checker.DiagUnexpectedSubtypeForExpr
@@ -108,9 +109,9 @@ class TypeManager(private val diagEngine: DiagnosticsEngine, private val extensi
                     node is stellaParser.RecordContext && !expected.isRecord -> DiagUnexpectedRecord(node, expected)
                     node is stellaParser.VariantContext && !expected.isVariant -> DiagUnexpectedVariant(node, expected)
                     node is stellaParser.AbstractionContext && !expected.isFunction -> DiagUnexpectedLambda(
-                        node,
-                        expected
+                        node, expected
                     )
+                    node is stellaParser.AbstractionContext && (expected as FunTy).params.size != node.paramDecls.size -> DiagUnexpectedNumberOfParamsInLambda(node, expected.params.size)
 
                     else -> null
                 }
@@ -210,12 +211,18 @@ class TypeManager(private val diagEngine: DiagnosticsEngine, private val extensi
         private fun visitVariant(expected: VariantTy, actual: Ty): Diag? {
             if (actual !is VariantTy) return typeMismatch(expected, actual)
 
+            if (Ty.withStructuralSubtyping) {
+                actual.components.forEach { (n, t) ->
+                    if (n !in expected.tags)
+                        return DiagUnexpectedVariantLabel(node as stellaParser.ExprContext, n, expected)
+                }
+            }
+
             if (actual.components.size != expected.components.size && !Ty.withStructuralSubtyping) return typeMismatch(expected, actual)
             if (actual.components.size > expected.components.size && Ty.withStructuralSubtyping) return typeMismatch(expected, actual)
 
             if (Ty.withStructuralSubtyping) {
                 actual.components.forEach { (n, t) ->
-                    if (n !in expected.tags) return DiagUnexpectedVariantLabel(node as stellaParser.ExprContext, n, expected)
                     if (actual.of(n) == null && expected.of(n) != null) return typeMismatch(expected, actual)
 
                     actual.of(n)?.let { actOfN ->
@@ -246,7 +253,15 @@ class TypeManager(private val diagEngine: DiagnosticsEngine, private val extensi
 
         private fun visitRef(expected: RefTy, actual: Ty): Diag? {
             if (actual !is RefTy) return typeMismatch(expected, actual)
-            return visit(expected.of, actual.of)
+
+            if (node is stellaParser.RefContext)
+                return visit(expected.of, actual.of)
+
+            if (node.getParent() is stellaParser.AssignContext && node.sourceInterval == (node.getParent() as stellaParser.AssignContext).lhs!!.sourceInterval) {
+                return visit(actual.of, expected.of)
+            }
+
+            return visit(actual.of, expected.of) ?: visit(expected.of, actual.of)
         }
 
         private fun typeMismatch(expected: Ty, actual: Ty): Diag {

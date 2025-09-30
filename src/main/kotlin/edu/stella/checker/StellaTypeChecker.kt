@@ -38,7 +38,6 @@ class StellaTypeChecker(
 
     override fun visitProgram(ctx: stellaParser.ProgramContext) {
         ctx.accept(MissingMainChecker(diag))
-        ctx.accept(UndefinedVariableChecker(this))
         ctx.accept(NotATupleChecker(this))
         ctx.accept(NotARecordChecker(this))
         ctx.accept(NotAListChecker(this))
@@ -72,7 +71,14 @@ class StellaTypeChecker(
         super.visitParenthesisedExpr(ctx)
     }
 
+    override fun visitVar(ctx: stellaParser.VarContext) {
+        super.visitVar(ctx)
+
+        ctx.accept(UndefinedVariableChecker(this))
+    }
+
     override fun visitMatch(ctx: stellaParser.MatchContext) {
+        ctx.expr().accept(this)
         types[ctx]?.let { retTy ->
             ctx.cases.forEach { cs ->
                 types.expect(cs.expr(), retTy)
@@ -83,13 +89,18 @@ class StellaTypeChecker(
             diag.diag(DiagEmptyMatching(ctx))
         }
 
-        super.visitMatch(ctx)
+        ctx.cases.forEach { it.accept(this) }
 
         ExhaustivenessChecker(ctx, types, diag).check()
     }
 
     override fun visitAbstraction(ctx: stellaParser.AbstractionContext) {
         (types.getExpectation(ctx) as? FunTy)?.let { expected ->
+
+            if (expected.params.size != ctx.paramDecls.size) {
+                diag.diag(DiagUnexpectedNumberOfParamsInLambda(ctx, expected.params.size))
+            }
+
             expected.params.zip(ctx.paramDecls).forEach { (expTy, param) ->
                 types.expect(param, expTy, contravariant = true)
             }
@@ -105,6 +116,10 @@ class StellaTypeChecker(
     override fun visitFix(ctx: stellaParser.FixContext) {
         types.getSynthesized(ctx.expr())?.let { ty ->
             if (!ty.isFunction) diag.diag(DiagNotAFunction(ctx, ty))
+        }
+
+        (types.getSynthesized(ctx.expr()) as? FunTy)?.let {
+            if (it.params.size != 1) diag.diag(DiagIncorrectNumberOfArgs(ctx.expr(), 1, actual = it.params.size))
         }
 
         types.getExpectation(ctx)?.let { ty ->
@@ -131,6 +146,9 @@ class StellaTypeChecker(
 
         val paramTys = mutableListOf<Ty>()
         (types.getSynthesized(ctx.func!!) as? FunTy)?.let { funTy ->
+            if (ctx.args.size != funTy.params.size) {
+                diag.diag(DiagIncorrectNumberOfArgs(ctx, funTy.params.size, actual = ctx.args.size))
+            }
             ctx.args.zip(funTy.params).forEach { (arg, ty) ->
                 types.expect(arg, ty)
                 paramTys += ty
