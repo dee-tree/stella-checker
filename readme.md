@@ -4,7 +4,7 @@ This project is a practice-related task for educational purposes of "type system
 
 ## Prerequisites
 
-- JDK 21 (other probably will be fine)
+- JDK 17 (other probably will be fine)
 - Kotlin 2.2 (other probably will not be fine)
 
 ## Build
